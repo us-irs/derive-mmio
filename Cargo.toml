@@ -1,0 +1,7 @@
+[package]
+name = "tock-registers-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mmio = { path = "./mmio" }
