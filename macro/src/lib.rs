@@ -13,7 +13,9 @@ pub fn derive_mmio(input: TokenStream) -> TokenStream {
     let mut is_repr_c = false;
     'attr: for attr in input.attrs.iter() {
         if attr.path().is_ident("repr") {
-            let nested = attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated).unwrap();
+            let nested = attr
+                .parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+                .unwrap();
             for meta in nested {
                 if let Meta::Path(path) = meta {
                     if path.is_ident("C") {
@@ -47,14 +49,14 @@ pub fn derive_mmio(input: TokenStream) -> TokenStream {
         // TODO: check the type here. If it's an array, we need an array function
         quote! {
             fn #read_fn_name(&mut self) -> #ty {
-                let addr = unsafe { &raw mut ((*self.ptr).#ident) };
+                let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#ident) };
                 unsafe {
                     addr.read_volatile()
                 }
             }
 
             fn #write_fn_name(&mut self, value: #ty) {
-                let addr = unsafe { &raw mut ((*self.ptr).#ident) };
+                let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#ident) };
                 unsafe {
                     addr.write_volatile(value)
                 }
@@ -67,6 +69,35 @@ pub fn derive_mmio(input: TokenStream) -> TokenStream {
             }
         }
     });
+
+    let ptr_func = if rustversion::cfg!(since(1.84)) {
+        quote! {
+            #[doc = "Create a new handle to this peripheral given an address."]
+            #[doc = ""]
+            #[doc = "# Safety"]
+            #[doc = ""]
+            #[doc = "See the safety notes for [`new_mmio`]. In addition, the address given"]
+            #[doc = "must have [exposed provenance](https://doc.rust-lang.org/stable/std/ptr/fn.with_exposed_provenance_mut.html)."]
+            pub unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident {
+                #wrapper_ident {
+                    ptr: core::ptr::with_exposed_provenance_mut(addr)
+                }
+            }
+        }
+    } else {
+        quote! {
+            #[doc = "Create a new handle to this peripheral given an address."]
+            #[doc = ""]
+            #[doc = "# Safety"]
+            #[doc = ""]
+            #[doc = "See the safety notes for [`new_mmio`]."]
+            pub unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident {
+                #wrapper_ident {
+                    ptr: addr as *mut #ident
+                }
+            }
+        }
+    };
 
     // combine the fragments into the desired output code
     TokenStream::from(quote! {
@@ -95,19 +126,7 @@ pub fn derive_mmio(input: TokenStream) -> TokenStream {
                 }
             }
 
-            #[doc = "Create a new handle to this peripheral given an address."]
-            #[doc = ""]
-            #[doc = "# Safety"]
-            #[doc = ""]
-            #[doc = "See the safety notes for [`new_mmio`]. In addition, the address given"]
-            #[doc = "must have [exposed provenance](https://doc.rust-lang.org/stable/std/ptr/fn.with_exposed_provenance_mut.html)."]
-            pub unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident {
-                #wrapper_ident {
-                    // TODO: require Rust 1.84. Check Rust version and offer
-                    // plain pointer cast here.
-                    ptr: core::ptr::with_exposed_provenance_mut(addr)
-                }
-            }
+            #ptr_func
         }
     })
 }

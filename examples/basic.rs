@@ -13,7 +13,8 @@ fn main() {
         control: 0xC,
     };
 
-    let mut mmio_uart = unsafe { Uart::new_mmio(&raw mut uart) };
+    // Safety: We're pointing at a real object
+    let mut mmio_uart = unsafe { Uart::new_mmio(core::ptr::addr_of_mut!(uart)) };
 
     println!("data = {}", mmio_uart.read_data());
     mmio_uart.modify_control(|f| {

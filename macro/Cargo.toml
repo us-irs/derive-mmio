@@ -9,4 +9,5 @@ proc-macro = true
 [dependencies]
 proc-macro-error2 = "2.0.1"
 quote = "1.0.38"
+rustversion = "1.0.19"
 syn = "2.0.98"

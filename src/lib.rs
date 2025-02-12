@@ -1,18 +1,18 @@
 //! 'derive-mmio' - turning structures into MMIO access objects
-//! 
+//!
 //! In C it is very common to create structures that refer to MMIO peripherals:
-//! 
+//!
 //! ```c
 //! typedef volatile struct uart_t {
 //!     uint32_t data;
 //!     const uint32_t status;
 //! } uart_t;
-//! 
+//!
 //! uart_t* p_uart = (uart_t*) 0x40008000;
 //! ```
-//! 
+//!
 //! In Rust, we have some issues:
-//! 
+//!
 //! 1. There are no volatile types, only volatile pointer reads/writes. So we
 //!    cannot mark a type as 'volatile' and have all accesses to its fields
 //!    performed a volatile operations. And given that MMIO registers have
@@ -25,7 +25,7 @@
 //! 3. Accessing a field of a struct without constructing a pointer to it used
 //!    to be quite tricky, although as of Rust 1.51 we have
 //!    [`core::ptr::addr_of_mut`] and as of Rust 1.84 we have `&raw mut`.
-//! 
+//!
 //! The usual solution to these problems is to auto-generate code based on some
 //! machine-readable (but non-Rust) description of the MMIO peripheral. This
 //! code will contain functions to get a 'handle' to a peripheral, and that
@@ -36,11 +36,11 @@
 //! available, or cover an entire SoC when a driver is in fact only aiming to
 //! work with one common MMIO peripheral (e.g. the Arm PL011 UART that has been
 //! licensed and copy-pasted in dozens of SoC designs).
-//! 
+//!
 //! This crate presents an alternative solution.
-//! 
+//!
 //! Consider the code:
-//! 
+//!
 //! ```rust
 //! #[derive(derive_mmio::Mmio)]
 //! #[repr(C)]
@@ -49,9 +49,9 @@
 //!     status: u32,
 //! }
 //! ```
-//! 
-//! The `derive_mmio::Mmio` derive-macro will expand this to:
-//! 
+//!
+//! The `derive_mmio::Mmio` derive-macro will expand this to something like:
+//!
 //! ```rust
 //! #[repr(C)]
 //! struct Uart {
@@ -63,11 +63,11 @@
 //! }
 //! impl MmioUart {
 //!     fn read_data(&mut self) -> u32 {
-//!         let addr = unsafe { &raw mut ((*self.ptr).data) };
+//!         let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).data) };
 //!         unsafe { addr.read_volatile() }
 //!     }
 //!     fn write_data(&mut self, value: u32) {
-//!         let addr = unsafe { &raw mut ((*self.ptr).data) };
+//!         let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).data) };
 //!         unsafe { addr.write_volatile(value) }
 //!     }
 //!     fn modify_data<F>(&mut self, f: F)
@@ -79,11 +79,11 @@
 //!         self.write_data(new_value);
 //!     }
 //!     fn read_status(&mut self) -> u32 {
-//!         let addr = unsafe { &raw mut ((*self.ptr).status) };
+//!         let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).status) };
 //!         unsafe { addr.read_volatile() }
 //!     }
 //!     fn write_status(&mut self, value: u32) {
-//!         let addr = unsafe { &raw mut ((*self.ptr).status) };
+//!         let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).status) };
 //!         unsafe { addr.write_volatile(value) }
 //!     }
 //!     fn modify_status<F>(&mut self, f: F)
@@ -100,19 +100,19 @@
 //! }
 //! pub unsafe fn new_mmio_at(addr: usize) -> MmioUart {
 //!     MmioUart {
-//!         ptr: core::ptr::without_provenance_mut(addr),
+//!         ptr: addr as *mut Uart,
 //!     }
 //! }
 //! ```
-//! 
+//!
 //! OK, that was a lot! Let's unpack it.
-//! 
+//!
 //! ```rust,ignore
 //! struct MmioUart {
 //!     ptr: *mut Uart,
 //! }
 //! ```
-//! 
+//!
 //! This structure, called `Mmio${StructName}` is a handle that proxies access
 //! to that particular peripheral. You create as many as you need by unsafely
 //! calling one of these methods we added to your struct type.
@@ -127,30 +127,30 @@
 //!     }
 //! }
 //! ```
-//! 
+//!
 //! One is for when you have a pointer, and the other is for when you only have
 //! the address (typically as a literal integer you read from the SoC's
 //! datasheet, like `0x4008_1000`).
-//! 
+//!
 //! The MMIO handle has methods to access each of the fields in the underlying
 //! struct.
-//! 
+//!
 //! You can read (which performs a volatile read):
-//! 
+//!
 //! ```rust,ignore
 //! println!("data = {}", mmio_uart.read_data());
 //! ```
-//! 
+//!
 //! You can write (which performs a volatile write):
-//! 
+//!
 //! ```rust,ignore
 //! mmio_uart.write_data(0x00);
 //! ```
-//! 
+//!
 //! And you can perform a read-modify-write (which requires exclusive access and
 //! you should not use if any other code might modify this register
 //! concurrently).
-//! 
+//!
 //! ```rust,ignore
 //! mmio_uart.modify(|mut r| {
 //!     r &= 0xF000_0000;

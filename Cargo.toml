@@ -1,7 +1,14 @@
 [package]
-name = "derive-mmio"
-version = "0.1.0"
+authors = [ "Jonathan Pallant <jonathan.pallant@ferrous-systems.com>" ]
+categories = [ "embedded" ]
+description = "A mechanism for making it easier to access MMIO peripherals"
 edition = "2021"
+keywords = [ "knurling", "mmio", "register", "derive"]
+license = "MIT OR Apache-2.0"
+name = "derive-mmio"
+readme = "README.md"
+repository = "https://github.com/ferrous-systems/derive-mmio"
+version = "0.1.0"
 
 [dependencies]
 derive-mmio-macro = { version = "=0.1.0", path = "./macro" }
