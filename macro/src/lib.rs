@@ -1,13 +1,15 @@
 //! The derive macro for the Mmio crate.
 
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use proc_macro_error2::{abort_call_site, proc_macro_error};
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, punctuated::Punctuated, Data, DeriveInput, Fields, Meta, Token};
+use syn::{
+    parse_macro_input, punctuated::Punctuated, Data, DeriveInput, Field, Fields, Ident, Meta, Token,
+};
 
 #[proc_macro_error]
 #[proc_macro_derive(Mmio)]
-pub fn derive_mmio(input: TokenStream) -> TokenStream {
+pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // validate our input
     let input = parse_macro_input!(input as DeriveInput);
     let mut is_repr_c = false;
@@ -39,36 +41,12 @@ pub fn derive_mmio(input: TokenStream) -> TokenStream {
     };
 
     // process the input to create the fragments we want
-    let field_funcs = fields.named.iter().map(|field| {
-        let ident = field.ident.as_ref().unwrap();
-        // TODO: check the ident here. If it's _xxx, then don't emit functions
-        let read_fn_name = format_ident!("read_{}", ident);
-        let write_fn_name = format_ident!("write_{}", ident);
-        let modify_fn_name = format_ident!("modify_{}", ident);
-        let ty = &field.ty;
-        // TODO: check the type here. If it's an array, we need an array function
-        quote! {
-            fn #read_fn_name(&mut self) -> #ty {
-                let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#ident) };
-                unsafe {
-                    addr.read_volatile()
-                }
-            }
-
-            fn #write_fn_name(&mut self, value: #ty) {
-                let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#ident) };
-                unsafe {
-                    addr.write_volatile(value)
-                }
-            }
-
-            fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#ty) -> #ty {
-                let value = self. #read_fn_name();
-                let new_value = f(value);
-                self. #write_fn_name(new_value);
-            }
-        }
-    });
+    let field_funcs = fields
+        .named
+        .iter()
+        .map(|field| (field, field.ident.as_ref().unwrap()))
+        .filter(|(_field, field_ident)| !field_ident.to_string().starts_with("_"))
+        .map(|(field, field_ident)| convert_field(field, field_ident));
 
     let ptr_func = if rustversion::cfg!(since(1.84)) {
         quote! {
@@ -100,8 +78,11 @@ pub fn derive_mmio(input: TokenStream) -> TokenStream {
     };
 
     // combine the fragments into the desired output code
-    TokenStream::from(quote! {
-        struct #wrapper_ident {
+    proc_macro::TokenStream::from(quote! {
+        #[doc = "An MMIO wrapper for [`"]
+        #[doc = stringify!(#ident)]
+        #[doc = "`]"]
+        pub struct #wrapper_ident {
             ptr: *mut #ident
         }
 
@@ -129,4 +110,42 @@ pub fn derive_mmio(input: TokenStream) -> TokenStream {
             #ptr_func
         }
     })
+}
+
+fn convert_field(field: &Field, field_ident: &Ident) -> TokenStream {
+    let read_fn_name = format_ident!("read_{}", field_ident);
+    let write_fn_name = format_ident!("write_{}", field_ident);
+    let modify_fn_name = format_ident!("modify_{}", field_ident);
+    let ty = &field.ty;
+    // TODO: check the type here. If it's an array, we need an array function
+    quote! {
+        #[doc = "Read the `"]
+        #[doc = stringify!(#field_ident)]
+        #[doc = "` register."]
+        fn #read_fn_name(&mut self) -> #ty {
+            let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
+            unsafe {
+                addr.read_volatile()
+            }
+        }
+
+        #[doc = "Write the `"]
+        #[doc = stringify!(#field_ident)]
+        #[doc = "` register."]
+        fn #write_fn_name(&mut self, value: #ty) {
+            let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
+            unsafe {
+                addr.write_volatile(value)
+            }
+        }
+
+        #[doc = "Read-Modify-Write the `"]
+        #[doc = stringify!(#field_ident)]
+        #[doc = "` register."]
+        fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#ty) -> #ty {
+            let value = self. #read_fn_name();
+            let new_value = f(value);
+            self. #write_fn_name(new_value);
+        }
+    }
 }

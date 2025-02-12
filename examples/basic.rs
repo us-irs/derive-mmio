@@ -3,6 +3,7 @@
 struct Uart {
     data: u32,
     control: u32,
+    _reserved: u32,
 }
 
 fn main() {
@@ -11,6 +12,7 @@ fn main() {
     let mut uart = Uart {
         data: 0xA,
         control: 0xC,
+        _reserved: 0,
     };
 
     // Safety: We're pointing at a real object
