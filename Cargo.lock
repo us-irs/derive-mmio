@@ -3,7 +3,14 @@
 version = 4
 
 [[package]]
-name = "mmio"
+name = "derive-mmio"
+version = "0.1.0"
+dependencies = [
+ "derive-mmio-macro",
+]
+
+[[package]]
+name = "derive-mmio-macro"
 version = "0.1.0"
 dependencies = [
  "proc-macro-error2",
@@ -60,13 +67,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "tock-registers-test"
-version = "0.1.0"
-dependencies = [
- "mmio",
 ]
 
 [[package]]
