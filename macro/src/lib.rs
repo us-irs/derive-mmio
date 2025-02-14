@@ -113,17 +113,27 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 fn convert_field(field: &Field, field_ident: &Ident) -> TokenStream {
+    let pointer_fn_name = format_ident!("pointer_to_{}", field_ident);
     let read_fn_name = format_ident!("read_{}", field_ident);
     let write_fn_name = format_ident!("write_{}", field_ident);
     let modify_fn_name = format_ident!("modify_{}", field_ident);
     let ty = &field.ty;
     // TODO: check the type here. If it's an array, we need an array function
     quote! {
+        #[doc = "Obtain a pointer to the `"]
+        #[doc = stringify!(#field_ident)]
+        #[doc = "` register."]
+        #[doc = ""]
+        #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
+        pub fn #pointer_fn_name(&mut self) -> *mut #ty{
+            unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) }
+        }
+
         #[doc = "Read the `"]
         #[doc = stringify!(#field_ident)]
         #[doc = "` register."]
-        pub fn #read_fn_name(&self) -> #ty {
-            let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
+        pub fn #read_fn_name(&mut self) -> #ty {
+            let addr = self.#pointer_fn_name();
             unsafe {
                 addr.read_volatile()
             }
@@ -133,7 +143,7 @@ fn convert_field(field: &Field, field_ident: &Ident) -> TokenStream {
         #[doc = stringify!(#field_ident)]
         #[doc = "` register."]
         pub fn #write_fn_name(&mut self, value: #ty) {
-            let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
+            let addr = self.#pointer_fn_name();
             unsafe {
                 addr.write_volatile(value)
             }

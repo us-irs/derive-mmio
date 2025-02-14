@@ -71,12 +71,15 @@ struct MmioUart {
 }
 // some methods on the 'handle' type
 impl MmioUart {
+    pub fn pointer_to_data(&mut self) -> *mut u32 {
+        unsafe { &raw mut (*self.ptr).data }
+    }
     pub fn read_data(&mut self) -> u32 {
-        let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).data) };
+        let addr = self.pointer_to_data();
         unsafe { addr.read_volatile() }
     }
     pub fn write_data(&mut self, value: u32) {
-        let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).data) };
+        let addr = self.pointer_to_data();
         unsafe { addr.write_volatile(value) }
     }
     pub fn modify_data<F>(&mut self, f: F)
@@ -87,22 +90,8 @@ impl MmioUart {
         let new_value = f(value);
         self.write_data(new_value);
     }
-    pub fn read_status(&mut self) -> u32 {
-        let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).status) };
-        unsafe { addr.read_volatile() }
-    }
-    pub fn write_status(&mut self, value: u32) {
-        let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).status) };
-        unsafe { addr.write_volatile(value) }
-    }
-    pub fn modify_status<F>(&mut self, f: F)
-    where
-        F: FnOnce(u32) -> u32,
-    {
-        let value = self.read_status();
-        let new_value = f(value);
-        self.write_status(new_value);
-    }
+
+    // and the same again for the 'control' register
 }
 // some new methods we add onto your type
 impl Uart {
@@ -171,6 +160,13 @@ mmio_uart.modify_control(|mut r| {
     r |= 1 << 31;
     r
 });
+```
+
+In the event you want to have a DMA engine write to a register on your
+peripheral, you can use this method:
+
+```rust,ignore
+let p = mmio_uart.pointer_to_data();
 ```
 */
 
