@@ -75,31 +75,13 @@ jobs:
         run: |
           rustup install stable
           rustup default stable
-      - name: Format
+      - name: Format Check
         run: |
           cargo fmt --check
-
-  # Format the macro
-  fmt-macro:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install rust
-        run: |
-          rustup install stable
-          rustup default stable
-      - name: Format
+      - name: Format Check for macro
         run: |
           cd macro
           cargo fmt --check
-
-  # Gather all the above fmt jobs together for the purposes of getting an overall pass-fail
-  fmt-all:
-    runs-on: ubuntu-latest
-    needs: [fmt, fmt-macro]
-    steps:
-      - run: /bin/true
 
   # Run clippy on the library
   clippy:
@@ -118,36 +100,14 @@ jobs:
       - name: Clippy
         run: |
           cargo clippy --examples
-
-  # Run clippy on the macro
-  clippy-macro:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust: [stable, 1.76]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install rust
-        run: |
-          rustup install ${{ matrix.rust }}
-          rustup default ${{ matrix.rust }}
-          rustup component add clippy
-      - name: Clippy
+      - name: Clippy for the Macro
         run: |
           cd macro
           cargo clippy
 
-  # Gather all the above clippy jobs together for the purposes of getting an overall pass-fail
-  clippy-all:
-    runs-on: ubuntu-latest
-    needs: [clippy, clippy-macro]
-    steps:
-      - run: /bin/true
-
   # Gather all the above xxx-all jobs together for the purposes of getting an overall pass-fail
   all:
     runs-on: ubuntu-latest
-    needs: [docs, build-all, fmt-all] # not gating on clippy-all
+    needs: [docs, build-all, fmt] # not gating on clippy-all
     steps:
       - run: /bin/true
