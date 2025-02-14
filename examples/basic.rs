@@ -1,3 +1,7 @@
+//! A basic example of using the Mmio trait.
+//!
+//! We use a 'fake' UART so this doesn't need any specific hardware to run.
+
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 struct Uart {
