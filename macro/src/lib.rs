@@ -122,7 +122,7 @@ fn convert_field(field: &Field, field_ident: &Ident) -> TokenStream {
         #[doc = "Read the `"]
         #[doc = stringify!(#field_ident)]
         #[doc = "` register."]
-        fn #read_fn_name(&mut self) -> #ty {
+        pub fn #read_fn_name(&self) -> #ty {
             let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
             unsafe {
                 addr.read_volatile()
@@ -132,7 +132,7 @@ fn convert_field(field: &Field, field_ident: &Ident) -> TokenStream {
         #[doc = "Write the `"]
         #[doc = stringify!(#field_ident)]
         #[doc = "` register."]
-        fn #write_fn_name(&mut self, value: #ty) {
+        pub fn #write_fn_name(&mut self, value: #ty) {
             let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
             unsafe {
                 addr.write_volatile(value)
@@ -142,7 +142,7 @@ fn convert_field(field: &Field, field_ident: &Ident) -> TokenStream {
         #[doc = "Read-Modify-Write the `"]
         #[doc = stringify!(#field_ident)]
         #[doc = "` register."]
-        fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#ty) -> #ty {
+        pub fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#ty) -> #ty {
             let value = self. #read_fn_name();
             let new_value = f(value);
             self. #write_fn_name(new_value);
