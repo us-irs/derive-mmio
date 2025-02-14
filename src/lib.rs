@@ -54,8 +54,9 @@ struct Uart {
 Note that your struct must be `repr(C)` and we will check this.
 
 The `derive_mmio::Mmio` derive-macro will generate some new methods and types
-for you. You can see this for yourself with `cargo expand`, but our example will
-expand to something like:
+for you. You can see this for yourself with `cargo doc` (or `cargo expand` if
+you have installed `cargo-expand`), but our example will expand to something
+like:
 
 ```rust
 // this is your type, unchanged
