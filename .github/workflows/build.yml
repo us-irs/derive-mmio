@@ -1,0 +1,113 @@
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+name: Build
+
+jobs:
+  # Build the library
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, 1.76]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install rust
+        run: |
+          rustup install ${{ matrix.rust }}
+          rustup default ${{ matrix.rust }}
+      - name: Build
+        run: |
+          cargo build --examples
+
+  # Build the macro
+  build-macro:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, 1.76]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install rust
+        run: |
+          rustup install ${{ matrix.rust }}
+          rustup default ${{ matrix.rust }}
+      - name: Build
+        run: |
+          cd macro
+          cargo build
+
+  # Gather all the above build jobs together for the purposes of getting an overall pass-fail
+  build-all:
+    runs-on: ubuntu-latest
+    needs: [build, build-macro]
+    steps:
+      - run: /bin/true
+
+  # Build the docs for the library
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, 1.76]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install rust
+        run: |
+          rustup install ${{ matrix.rust }}
+          rustup default ${{ matrix.rust }}
+      - name: Build docs
+        run: |
+          cargo doc --examples
+
+  # Format the library
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install rust
+        run: |
+          rustup install stable
+          rustup default stable
+      - name: Format Check
+        run: |
+          cargo fmt --check
+      - name: Format Check for macro
+        run: |
+          cd macro
+          cargo fmt --check
+
+  # Run clippy on the library
+  clippy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, 1.76]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install rust
+        run: |
+          rustup install ${{ matrix.rust }}
+          rustup default ${{ matrix.rust }}
+          rustup component add clippy
+      - name: Clippy
+        run: |
+          cargo clippy --examples
+      - name: Clippy for the Macro
+        run: |
+          cd macro
+          cargo clippy
+
+  # Gather all the above xxx-all jobs together for the purposes of getting an overall pass-fail
+  all:
+    runs-on: ubuntu-latest
+    needs: [docs, build-all, fmt] # not gating on clippy-all
+    steps:
+      - run: /bin/true
