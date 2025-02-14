@@ -51,27 +51,34 @@ struct Uart {
 }
 ```
 
-The `derive_mmio::Mmio` derive-macro will expand this to something like:
+Note that your struct must be `repr(C)` and we will check this.
+
+The `derive_mmio::Mmio` derive-macro will generate some new methods and types
+for you. You can see this for yourself with `cargo expand`, but our example will
+expand to something like:
 
 ```rust
+// this is your type, unchanged
 #[repr(C)]
 struct Uart {
     data: u32,
     status: u32,
 }
+// this is a new 'handle' type
 struct MmioUart {
     ptr: *mut Uart,
 }
+// some methods on the 'handle' type
 impl MmioUart {
-    fn read_data(&mut self) -> u32 {
+    pub fn read_data(&mut self) -> u32 {
         let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).data) };
         unsafe { addr.read_volatile() }
     }
-    fn write_data(&mut self, value: u32) {
+    pub fn write_data(&mut self, value: u32) {
         let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).data) };
         unsafe { addr.write_volatile(value) }
     }
-    fn modify_data<F>(&mut self, f: F)
+    pub fn modify_data<F>(&mut self, f: F)
     where
         F: FnOnce(u32) -> u32,
     {
@@ -79,15 +86,15 @@ impl MmioUart {
         let new_value = f(value);
         self.write_data(new_value);
     }
-    fn read_status(&mut self) -> u32 {
+    pub fn read_status(&mut self) -> u32 {
         let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).status) };
         unsafe { addr.read_volatile() }
     }
-    fn write_status(&mut self, value: u32) {
+    pub fn write_status(&mut self, value: u32) {
         let addr = unsafe { core::ptr::addr_of_mut!((*self.ptr).status) };
         unsafe { addr.write_volatile(value) }
     }
-    fn modify_status<F>(&mut self, f: F)
+    pub fn modify_status<F>(&mut self, f: F)
     where
         F: FnOnce(u32) -> u32,
     {
@@ -96,12 +103,15 @@ impl MmioUart {
         self.write_status(new_value);
     }
 }
-pub unsafe fn new_mmio(ptr: *mut Uart) -> MmioUart {
-    MmioUart { ptr }
-}
-pub unsafe fn new_mmio_at(addr: usize) -> MmioUart {
-    MmioUart {
-        ptr: addr as *mut Uart,
+// some new methods we add onto your type
+impl Uart {
+    pub unsafe fn new_mmio(ptr: *mut Uart) -> MmioUart {
+        MmioUart { ptr }
+    }
+    pub unsafe fn new_mmio_at(addr: usize) -> MmioUart {
+        MmioUart {
+            ptr: addr as *mut Uart,
+        }
     }
 }
 ```
@@ -119,12 +129,14 @@ to that particular peripheral. You create as many as you need by unsafely
 calling one of these methods we added to your struct type.
 
 ```rust,ignore
-pub unsafe fn new_mmio(ptr: *mut Uart) -> MmioUart {
-    MmioUart { ptr }
-}
-pub unsafe fn new_mmio_at(addr: usize) -> MmioUart {
-    MmioUart {
-        ptr: core::ptr::without_provenance_mut(addr),
+impl Uart {
+    pub unsafe fn new_mmio(ptr: *mut Uart) -> MmioUart {
+        MmioUart { ptr }
+    }
+    pub unsafe fn new_mmio_at(addr: usize) -> MmioUart {
+        MmioUart {
+            ptr: core::ptr::with_exposed_provenance_mut(addr),
+        }
     }
 }
 ```
