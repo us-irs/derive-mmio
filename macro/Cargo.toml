@@ -1,7 +1,13 @@
 [package]
-name = "derive-mmio-macro"
-version = "0.1.0"
+authors = [ "Jonathan Pallant <jonathan.pallant@ferrous-systems.com>" ]
+categories = [ "embedded" ]
+description = "The proc-macro for derive-mmio"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+name = "derive-mmio-macro"
+readme = "../README.md"
+repository = "https://github.com/knurling-rs/derive-mmio"
+version = "0.1.0"
 
 [lib]
 proc-macro = true
