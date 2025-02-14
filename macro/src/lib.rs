@@ -2,13 +2,13 @@
 
 use proc_macro2::TokenStream;
 use proc_macro_error2::{abort_call_site, proc_macro_error};
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, TokenStreamExt};
 use syn::{
     parse_macro_input, punctuated::Punctuated, Data, DeriveInput, Field, Fields, Ident, Meta, Token,
 };
 
 #[proc_macro_error]
-#[proc_macro_derive(Mmio)]
+#[proc_macro_derive(Mmio, attributes(mmio))]
 pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // validate our input
     let input = parse_macro_input!(input as DeriveInput);
@@ -41,12 +41,14 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     // process the input to create the fragments we want
-    let field_funcs = fields
+    let access_methods = fields
         .named
         .iter()
         .map(|field| (field, field.ident.as_ref().unwrap()))
         .filter(|(_field, field_ident)| !field_ident.to_string().starts_with("_"))
-        .map(|(field, field_ident)| convert_field(field, field_ident));
+        .map(|(field, field_ident)| generate_access_methods(field, field_ident));
+
+    let field_sizes = fields.named.iter().map(field_size);
 
     let ptr_func = if rustversion::cfg!(since(1.84)) {
         quote! {
@@ -87,7 +89,19 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         }
 
         impl #wrapper_ident {
-            #(#field_funcs)*
+            const _FIELD_SIZE: usize = {
+                0 #( + #field_sizes )*
+            };
+
+            const _SIZE_CHECK: () = {
+                let size = core::mem::size_of::<#ident>();
+                if size != Self::_FIELD_SIZE {
+                    panic!("Your structure contains padding!");
+                }
+                ()
+            };
+
+            #(#access_methods)*
         }
 
         impl #ident {
@@ -112,14 +126,61 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     })
 }
 
-fn convert_field(field: &Field, field_ident: &Ident) -> TokenStream {
+/// Convert a field into code that returns the field size
+fn field_size(field: &Field) -> TokenStream {
+    let ty = &field.ty;
+    quote! {
+        core::mem::size_of::<#ty>()
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum Access {
+    ReadOnly,
+    ReadWrite,
+}
+
+/// Convert a field into a set of methods that operate on that field
+fn generate_access_methods(field: &Field, field_ident: &Ident) -> TokenStream {
     let pointer_fn_name = format_ident!("pointer_to_{}", field_ident);
     let read_fn_name = format_ident!("read_{}", field_ident);
     let write_fn_name = format_ident!("write_{}", field_ident);
     let modify_fn_name = format_ident!("modify_{}", field_ident);
+
+    let mut access = None;
+    for attr in field.attrs.iter() {
+        if attr.path().is_ident("mmio") {
+            let Ok(nested) = attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+            else {
+                abort_call_site!("`Failed to parse #[mmio(...)]`");
+            };
+            for meta in nested {
+                if let Meta::Path(path) = meta {
+                    if path.is_ident("RO") {
+                        if access.replace(Access::ReadOnly).is_some() {
+                            abort_call_site!("`#[mmio(...)]` found second access argument");
+                        }
+                    } else if path.is_ident("RW") {
+                        if access.replace(Access::ReadWrite).is_some() {
+                            abort_call_site!("`#[mmio(...)]` found second access argument");
+                        }
+                    } else {
+                        abort_call_site!("`#[mmio(...)]` only supports 'RO' and 'RW' options");
+                    }
+                } else {
+                    abort_call_site!("`#[mmio(...)]` only supports 'RO' and 'RW' options");
+                }
+            }
+        }
+    }
+
+    // use ReadWrite for anything not otherwise marked
+    let access = access.unwrap_or(Access::ReadWrite);
+
     let ty = &field.ty;
     // TODO: check the type here. If it's an array, we need an array function
-    quote! {
+
+    let mut output = quote! {
         #[doc = "Obtain a pointer to the `"]
         #[doc = stringify!(#field_ident)]
         #[doc = "` register."]
@@ -138,24 +199,30 @@ fn convert_field(field: &Field, field_ident: &Ident) -> TokenStream {
                 addr.read_volatile()
             }
         }
+    };
 
-        #[doc = "Write the `"]
-        #[doc = stringify!(#field_ident)]
-        #[doc = "` register."]
-        pub fn #write_fn_name(&mut self, value: #ty) {
-            let addr = self.#pointer_fn_name();
-            unsafe {
-                addr.write_volatile(value)
+    if access == Access::ReadWrite {
+        output.append_all(quote! {
+            #[doc = "Write the `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "` register."]
+            pub fn #write_fn_name(&mut self, value: #ty) {
+                let addr = self.#pointer_fn_name();
+                unsafe {
+                    addr.write_volatile(value)
+                }
             }
-        }
 
-        #[doc = "Read-Modify-Write the `"]
-        #[doc = stringify!(#field_ident)]
-        #[doc = "` register."]
-        pub fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#ty) -> #ty {
-            let value = self. #read_fn_name();
-            let new_value = f(value);
-            self. #write_fn_name(new_value);
-        }
+            #[doc = "Read-Modify-Write the `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "` register."]
+            pub fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#ty) -> #ty {
+                let value = self. #read_fn_name();
+                let new_value = f(value);
+                self. #write_fn_name(new_value);
+            }
+        });
     }
+
+    output
 }
