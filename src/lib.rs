@@ -1,6 +1,8 @@
 /*!
 # 'derive-mmio' - turning structures into MMIO access objects
 
+## Rationale
+
 In C it is very common to create structures that refer to MMIO peripherals:
 
 ```c
@@ -37,6 +39,8 @@ SVD XML) description of the peripherals and those are either not always
 available, or cover an entire SoC when a driver is in fact only aiming to
 work with one common MMIO peripheral (e.g. the Arm PL011 UART that has been
 licensed and copy-pasted in dozens of SoC designs).
+
+## How this crate works
 
 This crate presents an alternative solution.
 
@@ -108,6 +112,8 @@ impl Uart {
 
 OK, that was a lot! Let's unpack it.
 
+## MMIO Wrapper
+
 ```rust,ignore
 struct MmioUart {
     ptr: *mut Uart,
@@ -134,6 +140,18 @@ impl Uart {
 One is for when you have a pointer, and the other is for when you only have
 the address (typically as a literal integer you read from the SoC's
 datasheet, like `0x4008_1000`).
+
+It is unsafe to create these - you must verify that you are passing a valid
+address or pointer, and that if you are creating multiple MMIO handles for one
+peripheral at the same same that you use them in a way that complies with the
+peripheral's rules around concurrent access. For example, don't create two
+handles and use them to both do a read-modify-write on the *same* register
+at the same time - that's a race hazard and the results won't be reliable. But
+you could create two and use them to read-modify-write *different* registers -
+probably. It depends on whether the registers affect each other or operate
+in isolation.
+
+## MMIO Methods
 
 The MMIO handle has methods to access each of the fields in the underlying
 struct.
@@ -162,12 +180,24 @@ mmio_uart.modify_control(|mut r| {
 });
 ```
 
-In the event you want to have a DMA engine write to a register on your
-peripheral, you can use this method:
+If you need a pointer to a register, for example if you want to have a DMA
+engine write to a register on your peripheral, you can use this method:
 
 ```rust,ignore
-let p = mmio_uart.pointer_to_data();
+let p: *mut u32 = mmio_uart.pointer_to_data();
 ```
+
+## Supported field types
+
+Currently this crate has been tested with `u32` and `bitbybit::bitfield` types.
+Other `repr(transparent)` types should work, but you should be careful to ensure
+that every field corresponds 1:1 with an MMIO register and that they are the
+apppropriate size for your CPU architecture.
+
+If you accidentally introduce padding (or, if the sum of the size of the
+individual fields isn't the same as the size of the overall `struct`), you will
+get a compile error.
+
 */
 
 #![no_std]
