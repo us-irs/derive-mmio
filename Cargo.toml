@@ -7,7 +7,7 @@ keywords = [ "knurling", "mmio", "register", "derive"]
 license = "MIT OR Apache-2.0"
 name = "derive-mmio"
 readme = "README.md"
-repository = "https://github.com/ferrous-systems/derive-mmio"
+repository = "https://github.com/knurling-rs/derive-mmio"
 version = "0.1.0"
 
 [dependencies]
