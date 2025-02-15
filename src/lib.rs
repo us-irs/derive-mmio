@@ -51,7 +51,9 @@ Consider the code:
 #[repr(C)]
 struct Uart {
     data: u32,
+    #[mmio(RO)]
     status: u32,
+    control: u32,
 }
 ```
 
@@ -95,7 +97,16 @@ impl MmioUart {
         self.write_data(new_value);
     }
 
-    // and the same again for the 'control' register
+    // but you can only read the status register
+    pub fn pointer_to_status(&mut self) -> *mut u32 {
+        unsafe { &raw mut (*self.ptr).status }
+    }
+    pub fn read_status(&mut self) -> u32 {
+        let addr = self.pointer_to_status();
+        unsafe { addr.read_volatile() }
+    }
+
+    // The control register methods are skipped here for brevity
 }
 // some new methods we add onto your type
 impl Uart {
