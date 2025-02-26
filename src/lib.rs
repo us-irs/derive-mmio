@@ -99,10 +99,10 @@ impl MmioUart {
 }
 // some new methods we add onto your type
 impl Uart {
-    pub unsafe fn new_mmio(ptr: *mut Uart) -> MmioUart {
+    pub const unsafe fn new_mmio(ptr: *mut Uart) -> MmioUart {
         MmioUart { ptr }
     }
-    pub unsafe fn new_mmio_at(addr: usize) -> MmioUart {
+    pub const unsafe fn new_mmio_at(addr: usize) -> MmioUart {
         MmioUart {
             ptr: addr as *mut Uart,
         }
@@ -126,12 +126,12 @@ calling one of these methods we added to your struct type.
 
 ```rust,ignore
 impl Uart {
-    pub unsafe fn new_mmio(ptr: *mut Uart) -> MmioUart {
+    pub const unsafe fn new_mmio(ptr: *mut Uart) -> MmioUart {
         MmioUart { ptr }
     }
-    pub unsafe fn new_mmio_at(addr: usize) -> MmioUart {
+    pub const unsafe fn new_mmio_at(addr: usize) -> MmioUart {
         MmioUart {
-            ptr: core::ptr::with_exposed_provenance_mut(addr),
+            ptr: addr as *mut Uart,
         }
     }
 }
