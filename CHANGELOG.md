@@ -7,11 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2025-02-26
+
+### Changed
+
+* The `fn new_mmio` and `fn new_mmio_at` functions are now cost
+* We no longer emit a different version of `fn new_mmio_at` using exposed
+  provenence on Rust version 1.84 or higher - because that API is not (yet)
+  const.
+
 ## [v0.2.0] - 2025-02-14
 
 ### Added
 
-* `pointer_xxx` methods
+* `pointer_to_xxx` methods
 * Support for `mmio(RO)` and `mmio(RW)` attributes to mark fields as read-only or read-write
 * A check for padding within the struct (which is not allowed)
 
