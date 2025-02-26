@@ -50,31 +50,15 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let field_sizes = fields.named.iter().map(field_size);
 
-    let ptr_func = if rustversion::cfg!(since(1.84)) {
-        quote! {
-            #[doc = "Create a new handle to this peripheral given an address."]
-            #[doc = ""]
-            #[doc = "# Safety"]
-            #[doc = ""]
-            #[doc = "See the safety notes for [`new_mmio`]. In addition, the address given"]
-            #[doc = "must have [exposed provenance](https://doc.rust-lang.org/stable/std/ptr/fn.with_exposed_provenance_mut.html)."]
-            pub unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident {
-                #wrapper_ident {
-                    ptr: core::ptr::with_exposed_provenance_mut(addr)
-                }
-            }
-        }
-    } else {
-        quote! {
-            #[doc = "Create a new handle to this peripheral given an address."]
-            #[doc = ""]
-            #[doc = "# Safety"]
-            #[doc = ""]
-            #[doc = "See the safety notes for [`new_mmio`]."]
-            pub unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident {
-                #wrapper_ident {
-                    ptr: addr as *mut #ident
-                }
+    let ptr_func = quote! {
+        #[doc = "Create a new handle to this peripheral given an address."]
+        #[doc = ""]
+        #[doc = "# Safety"]
+        #[doc = ""]
+        #[doc = "See the safety notes for [`new_mmio`]."]
+        pub const unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident {
+            #wrapper_ident {
+                ptr: addr as *mut #ident
             }
         }
     };
@@ -115,7 +99,7 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             #[doc = "If you create multiple instances of this handle at the same time,"]
             #[doc = "you are responsible for ensuring that there are no read-modify-write"]
             #[doc = "races on any of the registers."]
-            pub unsafe fn new_mmio(ptr: *mut #ident) -> #wrapper_ident {
+            pub const unsafe fn new_mmio(ptr: *mut #ident) -> #wrapper_ident {
                 #wrapper_ident {
                     ptr
                 }
