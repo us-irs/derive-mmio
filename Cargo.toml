@@ -11,4 +11,4 @@ repository = "https://github.com/knurling-rs/derive-mmio"
 version = "0.3.0"
 
 [dependencies]
-derive-mmio-macro = { version = "=0.2.0", path = "./macro" }
+derive-mmio-macro = { version = "=0.3.0", path = "./macro" }
