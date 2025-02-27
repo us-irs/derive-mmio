@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Compile time check for padding now works reliably
+- Add `no_ctors` attribute which allows the user to write custom constructors.
+
 ## [v0.3.0] - 2025-02-26
 
 ### Changed
