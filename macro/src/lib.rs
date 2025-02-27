@@ -22,7 +22,7 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                         omit_ctor = true;
                         return Ok(());
                     }
-                    Err(meta.error("invalid content of mmio attribute, expected `no_ctors`"))
+                    Err(meta.error("invalid content of mmio attribute, only expected `no_ctors`"))
                 }) {
                     abort!(e);
                 };
@@ -64,9 +64,10 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let field_sizes = fields.named.iter().map(field_size);
 
-    let mut constructors = None;
-    if !omit_ctor {
-        constructors = Some(quote! {
+    let constructors = if omit_ctor {
+        None
+    } else {
+        Some(quote! {
             #[doc = "Create a new handle to this peripheral given an address."]
             #[doc = ""]
             #[doc = "# Safety"]
@@ -93,7 +94,7 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     ptr
                 }
             }
-        });
+        })
     };
 
     // combine the fragments into the desired output code
