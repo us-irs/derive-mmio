@@ -1,7 +1,7 @@
 //! The derive macro for the Mmio crate.
 
 use proc_macro2::TokenStream;
-use proc_macro_error2::{abort_call_site, proc_macro_error};
+use proc_macro_error2::{abort, abort_call_site, proc_macro_error};
 use quote::{format_ident, quote, TokenStreamExt};
 use syn::{
     parse_macro_input, punctuated::Punctuated, Data, DeriveInput, Field, Fields, Ident, Meta, Token,
@@ -13,7 +13,21 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // validate our input
     let input = parse_macro_input!(input as DeriveInput);
     let mut is_repr_c = false;
+    let mut omit_ctor = false;
     'attr: for attr in input.attrs.iter() {
+        if attr.path().is_ident("mmio") {
+            if let Meta::List(list) = &attr.meta {
+                if let Err(e) = list.parse_nested_meta(|meta| {
+                    if meta.path.is_ident("no_ctors") {
+                        omit_ctor = true;
+                        return Ok(());
+                    }
+                    Err(meta.error("invalid content of mmio attribute, expected `fixed`"))
+                }) {
+                    abort!(e);
+                };
+            }
+        }
         if attr.path().is_ident("repr") {
             let nested = attr
                 .parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
@@ -50,7 +64,7 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let field_sizes = fields.named.iter().map(field_size);
 
-    let ptr_func = quote! {
+    let ptr_constructor = quote! {
         #[doc = "Create a new handle to this peripheral given an address."]
         #[doc = ""]
         #[doc = "# Safety"]
@@ -61,6 +75,29 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 ptr: addr as *mut #ident
             }
         }
+    };
+    let mut constructors = None;
+
+    if !omit_ctor {
+        constructors = Some(quote! {
+            #ptr_constructor
+
+            #[doc = "Create a new handle to this peripheral."]
+            #[doc = ""]
+            #[doc = "# Safety"]
+            #[doc = ""]
+            #[doc = "The pointer given must have suitable alignment, and point to an object"]
+            #[doc = "which matches the layout given by the structure pointed to."]
+            #[doc = ""]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            pub const unsafe fn new_mmio(ptr: *mut #ident) -> #wrapper_ident {
+                #wrapper_ident {
+                    ptr
+                }
+            }
+        });
     };
 
     // combine the fragments into the desired output code
@@ -77,35 +114,14 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 0 #( + #field_sizes )*
             };
 
-            const _SIZE_CHECK: () = {
-                let size = core::mem::size_of::<#ident>();
-                if size != Self::_FIELD_SIZE {
-                    panic!("Your structure contains padding!");
-                }
-                ()
-            };
+            // Must match expected size
+            const _SIZE_CHECK: [(); Self::_FIELD_SIZE] = [(); core::mem::size_of::<#ident>()];
 
             #(#access_methods)*
         }
 
         impl #ident {
-            #[doc = "Create a new handle to this peripheral."]
-            #[doc = ""]
-            #[doc = "# Safety"]
-            #[doc = ""]
-            #[doc = "The pointer given must have suitable alignment, and point to an object"]
-            #[doc = "which matches the layout given by the structure pointed to."]
-            #[doc = ""]
-            #[doc = "If you create multiple instances of this handle at the same time,"]
-            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
-            #[doc = "races on any of the registers."]
-            pub const unsafe fn new_mmio(ptr: *mut #ident) -> #wrapper_ident {
-                #wrapper_ident {
-                    ptr
-                }
-            }
-
-            #ptr_func
+            #constructors
         }
     })
 }
