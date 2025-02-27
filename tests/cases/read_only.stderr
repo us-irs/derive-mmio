@@ -1,0 +1,13 @@
+error[E0599]: no method named `write_status` found for struct `MmioUart` in the current scope
+  --> tests/cases/read_only.rs:16:15
+   |
+1  | #[derive(derive_mmio::Mmio)]
+   |          ----------------- method `write_status` not found for this struct
+...
+16 |     mmio_uart.write_status();
+   |               ^^^^^^^^^^^^
+   |
+help: there is a method `read_status` with a similar name
+   |
+16 |     mmio_uart.read_status();
+   |               ~~~~~~~~~~~

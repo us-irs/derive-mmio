@@ -1,7 +1,3 @@
-//! A basic example of using the Mmio trait.
-//!
-//! We use a 'fake' UART so this doesn't need any specific hardware to run.
-
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 struct Uart {
@@ -16,7 +12,7 @@ struct Uart {
     // this is ignored
     _reserved: u32,
     // this will introduce padding, which will fail the compilation
-    //_reserved2: u8,
+    // _reserved2: u8,
 }
 
 fn main() {
@@ -25,25 +21,27 @@ fn main() {
         control: 0xC,
         status: 0xF,
         _reserved: 0,
-        //_reserved2: 0,
+        // _reserved2: 0,
     };
 
     // Safety: We're pointing at a real object
     let mut mmio_uart = unsafe { Uart::new_mmio(core::ptr::addr_of_mut!(uart)) };
-    println!("sample UART is @ {:p}", core::ptr::addr_of_mut!(uart));
 
-    println!("data = {}", mmio_uart.read_data());
+    let ptr_raw = core::ptr::addr_of_mut!(uart);
+    assert_eq!(mmio_uart.read_data(), 0xA);
     mmio_uart.write_data(0x0B);
-    println!("data = {}", mmio_uart.read_data());
-    println!("data register is at = {:p}", mmio_uart.pointer_to_data());
+    assert_eq!(mmio_uart.read_data(), 0xB);
+    assert_eq!(mmio_uart.pointer_to_data(), ptr_raw as _);
 
     mmio_uart.modify_control(|f| {
-        println!("control was {f}, is now 32");
+        assert_eq!(f, 0xC);
         32
     });
-    println!("control = {}", mmio_uart.read_control());
-    println!("control register is @ {:p}", mmio_uart.pointer_to_control());
-
-    println!("status = {}", mmio_uart.read_status());
-    println!("status register is @ {:p}", mmio_uart.pointer_to_status());
+    assert!(mmio_uart.read_control() == 32);
+    assert_eq!(mmio_uart.read_status(), 0xF);
+    let ptr_to_u32s = ptr_raw as *const u32 ;
+    assert_eq!(
+        mmio_uart.pointer_to_status(),
+        ptr_to_u32s.wrapping_add(2) as _
+    );
 }
