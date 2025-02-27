@@ -204,7 +204,7 @@ The following attributes are supported:
 
 ### Outer attributes
 
-- `#[mmio(no_ctors)]`: Omit the generation of constructor functions like [new_mmio_at] and
+- `#[mmio(no_ctors)]`: Omit the generation of constructor functions like `new_mmio_at` and
    `new_mmio`. This allows users to specify own custom constructors, for example to constrain
    or check the allowed base adresses.
 
