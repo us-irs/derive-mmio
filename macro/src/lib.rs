@@ -64,23 +64,20 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let field_sizes = fields.named.iter().map(field_size);
 
-    let ptr_constructor = quote! {
-        #[doc = "Create a new handle to this peripheral given an address."]
-        #[doc = ""]
-        #[doc = "# Safety"]
-        #[doc = ""]
-        #[doc = "See the safety notes for [`new_mmio`]."]
-        pub const unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident {
-            #wrapper_ident {
-                ptr: addr as *mut #ident
+    let constructors = if omit_ctor {
+        None
+    } else {
+        Some(quote! {
+            #[doc = "Create a new handle to this peripheral given an address."]
+            #[doc = ""]
+            #[doc = "# Safety"]
+            #[doc = ""]
+            #[doc = "See the safety notes for [`new_mmio`]."]
+            pub const unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident {
+                #wrapper_ident {
+                    ptr: addr as *mut #ident
+                }
             }
-        }
-    };
-    let mut constructors = None;
-
-    if !omit_ctor {
-        constructors = Some(quote! {
-            #ptr_constructor
 
             #[doc = "Create a new handle to this peripheral."]
             #[doc = ""]
@@ -97,7 +94,7 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     ptr
                 }
             }
-        });
+        })
     };
 
     // combine the fragments into the desired output code
