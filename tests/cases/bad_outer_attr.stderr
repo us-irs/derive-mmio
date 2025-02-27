@@ -1,0 +1,5 @@
+error: invalid content of mmio attribute, only expected `no_ctors`
+ --> tests/cases/bad_outer_attr.rs:6:8
+  |
+6 | #[mmio(no_ctors_x)]
+  |        ^^^^^^^^^^

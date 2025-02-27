@@ -22,7 +22,7 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                         omit_ctor = true;
                         return Ok(());
                     }
-                    Err(meta.error("invalid content of mmio attribute, expected `fixed`"))
+                    Err(meta.error("invalid content of mmio attribute, only expected `no_ctors`"))
                 }) {
                     abort!(e);
                 };
