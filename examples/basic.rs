@@ -1,6 +1,12 @@
 //! A basic example of using the Mmio trait.
 //!
 //! We use a 'fake' UART so this doesn't need any specific hardware to run.
+//!
+//! You can expand this example by running
+//!
+//! ```rs
+//! cargo expand --example inner_block
+//! ```
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
