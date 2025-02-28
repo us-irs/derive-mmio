@@ -5,7 +5,7 @@
 //! You can expand this example by running
 //!
 //! ```rs
-//! cargo expand --example inner_block
+//! cargo expand --example basic
 //! ```
 
 #[derive(derive_mmio::Mmio)]
