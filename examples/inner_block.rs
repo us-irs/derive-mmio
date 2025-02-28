@@ -17,7 +17,10 @@ mod inner {
 
     impl UartBank {
         pub fn fake() -> UartBank {
-            UartBank { data: 0, status: 0 }
+            UartBank {
+                data: 0x2,
+                status: 0x3,
+            }
         }
     }
 }
@@ -44,9 +47,11 @@ fn main() {
     let mut mmio_uart = unsafe { Uart::new_mmio(core::ptr::addr_of_mut!(uart)) };
     let mut bank0 = mmio_uart.bank_0();
     let bank0_data = bank0.read_data();
-    assert_eq!(bank0_data, 0x1);
+    assert_eq!(bank0_data, 0x2);
     let bank0_status = bank0.read_status();
-    assert_eq!(bank0_status, 0x2);
+    assert_eq!(bank0_status, 0x3);
+    bank0.write_data(0x42);
+    assert_eq!(bank0.read_data(), 0x42);
 
     // You can't do this, because the bank0 value is holding
     // a mutable borrow on the underlying UART. This prevents you creating
@@ -57,7 +62,7 @@ fn main() {
     assert_eq!(bank0.read_status(), 0x5);
 
     let bank1_data = mmio_uart.bank_1().read_data();
-    assert_eq!(bank1_data, 0x3);
+    assert_eq!(bank1_data, 0x2);
     let bank1_data = mmio_uart.bank_1().read_status();
-    assert_eq!(bank1_data, 0x4);
+    assert_eq!(bank1_data, 0x3);
 }
