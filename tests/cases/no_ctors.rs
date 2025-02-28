@@ -7,9 +7,10 @@ struct Uart {
 
 impl Uart {
     // No name clashes, we can implement it ourselves.
-    pub fn new_mmio() -> MmioUart {
+    pub fn new_mmio() -> MmioUart<'static> {
         MmioUart {
             ptr: 0x10002000 as *mut Uart,
+            phantom: core::marker::PhantomData,
         }
     }
 }

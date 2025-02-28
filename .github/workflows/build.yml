@@ -6,12 +6,23 @@ on:
 name: Build
 
 jobs:
+
+  # Define Rust versions dynamically
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.rust_versions }}
+    steps:
+      - id: set-matrix
+        run: |
+          echo 'rust_versions={"rust": ["stable", "1.70"]}' >> "$GITHUB_OUTPUT"
+
   # Build the library
   build:
     runs-on: ubuntu-latest
+    needs: setup
     strategy:
-      matrix:
-        rust: [stable, 1.76]
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,9 +37,9 @@ jobs:
   # Build the macro
   build-macro:
     runs-on: ubuntu-latest
+    needs: setup
     strategy:
-      matrix:
-        rust: [stable, 1.76]
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,12 +59,21 @@ jobs:
     steps:
       - run: /bin/true
 
+  # Test the library
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+
   # Build the docs for the library
   docs:
     runs-on: ubuntu-latest
+    needs: setup
     strategy:
-      matrix:
-        rust: [stable, 1.76]
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,9 +106,9 @@ jobs:
   # Run clippy on the library
   clippy:
     runs-on: ubuntu-latest
+    needs: setup
     strategy:
-      matrix:
-        rust: [stable, 1.76]
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -108,6 +128,6 @@ jobs:
   # Gather all the above xxx-all jobs together for the purposes of getting an overall pass-fail
   all:
     runs-on: ubuntu-latest
-    needs: [docs, build-all, fmt] # not gating on clippy-all
+    needs: [docs, build-all, test, fmt] # not gating on clippy-all
     steps:
       - run: /bin/true
