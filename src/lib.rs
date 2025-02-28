@@ -200,11 +200,24 @@ MMIO structure. The macro will also generate an `unsafe` `steal_${inner_field}` 
 which has a static lifetime, which in turn allows to create an aribtraty number
 of owned inner MMIO objects.
 
+For array fields, the macro will generate the following API:
+
+- `pointer_to_${field_name}_start`
+- `read_${field_name}` which performs bound checking.
+- unsafe `read_${field_name}_unchecked` which does not perform bound checking.
+- `write_${field_name}` which performs bound checking.
+- unsafe `write_${field_name}_unchecked` which does not perform bound checking.
+- `modify_${field_name}` which performs bound checking.
+- unsafe `modify_${field_name}_unchecked` which does not perform bound checking.
+
+Except for the pointer method, all APIs expect the array index as the first argument.
+
 ## Supported field types
 
 The following field types are supported and tested:
 
 - [u32]
+- Arrays of [u32]
 - bitfields implemented with [bitbybit::bitfield](https://crates.io/crates/bitbybit)
 - Other [Mmio] types which are annotated with the `[mmio(inner)]` attribute.
 
@@ -236,6 +249,20 @@ The following attributes are supported:
 */
 
 #![no_std]
+use core::fmt::Display;
+
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct OutOfBoundsError(pub usize);
+
+impl Display for OutOfBoundsError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "out of bounds access at index {}", self.0)
+    }
+}
+
+#[rustversion::since(1.81)]
+impl core::error::Error for OutOfBoundsError {}
 
 /// Marker trait to check whether inner field have implemented Mmio.
 ///
