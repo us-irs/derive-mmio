@@ -16,7 +16,6 @@ derive-mmio-macro = { version = "=0.3.0", path = "./macro" }
 defmt = { version = "0.3", optional = true }
 
 [features]
-default = ["std"]
 std = []
 
 [dev-dependencies]

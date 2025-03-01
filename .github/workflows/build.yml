@@ -32,7 +32,7 @@ jobs:
           rustup default ${{ matrix.rust }}
       - name: Build
         run: |
-          cargo build --examples
+          cargo build --examples --features std
 
   # Cross-Build the library with no_std
   cross-build:
@@ -87,7 +87,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
+      - run: cargo test --features std
 
   # Build the docs for the library
   docs:
@@ -140,7 +140,7 @@ jobs:
           rustup component add clippy
       - name: Clippy
         run: |
-          cargo clippy --examples
+          cargo clippy --examples --features std
       - name: Clippy for the Macro
         run: |
           cd macro
