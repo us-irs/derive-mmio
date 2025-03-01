@@ -94,6 +94,7 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             #[doc = "If you create multiple instances of this handle at the same time,"]
             #[doc = "you are responsible for ensuring that there are no read-modify-write"]
             #[doc = "races on any of the registers."]
+            #[inline]
             pub const unsafe fn new_mmio(ptr: *mut #ident) -> #wrapper_ident<'static> {
                 #wrapper_ident {
                     ptr,
@@ -243,6 +244,7 @@ impl FieldParser {
                     #[doc = ""]
                     #[doc = "The lifetime of the returned inner MMIO block is tied to the "]
                     #[doc = "lifetime of this structure"]
+                    #[inline]
                     pub fn #field_ident(&mut self) -> #inner_mmio_path<'_> {
                         unsafe {
                             self.#steal_func_name()
@@ -260,6 +262,7 @@ impl FieldParser {
                     #[doc = "If you create multiple instances of this handle at the same time,"]
                     #[doc = "you are responsible for ensuring that there are no read-modify-write"]
                     #[doc = "races on any of the registers."]
+                    #[inline]
                     pub unsafe fn #steal_func_name(&mut self) -> #inner_mmio_path<'static> {
                         let ptr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
                         unsafe {
@@ -294,6 +297,7 @@ impl FieldParser {
             #[doc = "` register."]
             #[doc = ""]
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
+            #[inline(always)]
             pub fn #pointer_fn_name(&mut self) -> *mut #type_path{
                 unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) }
             }
@@ -301,6 +305,7 @@ impl FieldParser {
             #[doc = "Read the `"]
             #[doc = stringify!(#field_ident)]
             #[doc = "` register."]
+            #[inline(always)]
             pub fn #read_fn_name(&mut self) -> #type_path {
                 let addr = self.#pointer_fn_name();
                 unsafe {
@@ -314,6 +319,7 @@ impl FieldParser {
                 #[doc = "Write the `"]
                 #[doc = stringify!(#field_ident)]
                 #[doc = "` register."]
+                #[inline(always)]
                 pub fn #write_fn_name(&mut self, value: #type_path) {
                     let addr = self.#pointer_fn_name();
                     unsafe {
@@ -324,6 +330,7 @@ impl FieldParser {
                 #[doc = "Read-Modify-Write the `"]
                 #[doc = stringify!(#field_ident)]
                 #[doc = "` register."]
+                #[inline]
                 pub fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#type_path) -> #type_path {
                     let value = self. #read_fn_name();
                     let new_value = f(value);
