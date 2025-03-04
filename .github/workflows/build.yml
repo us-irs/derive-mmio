@@ -34,6 +34,27 @@ jobs:
         run: |
           cargo build --examples
 
+  # Cross-Build the library with no_std
+  cross-build:
+    runs-on: ubuntu-latest
+    needs: setup
+    strategy:
+      matrix:
+        rust: ${{ fromJSON(needs.setup.outputs.matrix).rust }}
+        target:
+          - thumbv7em-none-eabihf
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install rust
+        run: |
+          rustup install ${{ matrix.rust }}
+          rustup default ${{ matrix.rust }}
+          rustup target add ${{ matrix.target }}
+      - name: Build
+        run: |
+          cargo build --manifest-path ./examples/no_std/Cargo.toml --target ${{ matrix.target }}
+
   # Build the macro
   build-macro:
     runs-on: ubuntu-latest
@@ -55,7 +76,7 @@ jobs:
   # Gather all the above build jobs together for the purposes of getting an overall pass-fail
   build-all:
     runs-on: ubuntu-latest
-    needs: [build, build-macro]
+    needs: [build, build-macro, cross-build]
     steps:
       - run: /bin/true
 
