@@ -68,11 +68,20 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         #(#access_methods)*
     };
     let field_sizes = fields.named.iter().map(field_size);
+    let bound_checks = &field_parser.bound_checks;
+    let mut bound_check_func = TokenStream::new();
+    if !bound_checks.is_empty() {
+        bound_check_func.append_all(quote! {
+            #[doc(hidden)]
+            const fn __bound_check_mmio() {
+                #(#bound_checks;)*
+            }
+        });
+    }
 
     let constructors = if omit_ctor {
         None
     } else {
-        let bound_checks = &field_parser.bound_checks;
         Some(quote! {
             #[doc = "Create a new handle to this peripheral given an address."]
             #[doc = ""]
@@ -80,7 +89,6 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             #[doc = ""]
             #[doc = "See the safety notes for [`new_mmio`]."]
             pub const unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident<'static> {
-                # ( #bound_checks ) *
                 Self::new_mmio(addr as *mut #ident)
             }
 
@@ -127,6 +135,8 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         unsafe impl derive_mmio::_MmioMarker for #wrapper_ident<'_> {}
 
         impl #ident {
+            #bound_check_func
+
             #constructors
         }
 
