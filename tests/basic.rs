@@ -44,4 +44,8 @@ fn main() {
         mmio_uart.pointer_to_status(),
         ptr_to_u32s.wrapping_add(2) as _
     );
+
+    // We can unsafely clone the MMIO object.
+    let mut mmio_uart_clone = unsafe { mmio_uart.clone() };
+    assert_eq!(mmio_uart_clone.read_data(), 0xB);
 }
