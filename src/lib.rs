@@ -223,7 +223,7 @@ The following field types are supported and tested:
 
 Other `repr(transparent)` types should work, but you should be careful to ensure
 that every field corresponds 1:1 with an MMIO register and that they are the
-apppropriate size for your CPU architecture.
+appropriate size for your CPU architecture.
 
 If you accidentally introduce padding (or, if the sum of the size of the
 individual fields isn't the same as the size of the overall `struct`), you will
