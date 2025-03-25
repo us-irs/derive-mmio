@@ -209,7 +209,7 @@ struct AccessModifiers {
 impl AccessModifiers {
     pub fn convert_unmodified(&mut self) -> bool {
         if self.read.is_none() && !self.write && !self.modify {
-            self.read = Some(ReadAccess::Normal);
+            self.read = Some(ReadAccess::Pure);
             self.write = true;
             self.modify = true;
             return true;
