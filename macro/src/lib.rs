@@ -259,7 +259,10 @@ impl FieldParser {
                 self.bound_checks.push(quote! {
                     derive_mmio::is_mmio::<#inner_mmio_path>();
                 });
+                let field_ident_shared = format_ident!("{}_shared", field_ident);
                 let steal_func_name = format_ident!("steal_{}", field_ident);
+                let steal_func_name_shared = format_ident!("steal_{}_shared", field_ident);
+                let steal_func_unchecked_name = format_ident!("__steal_{}_unchecked", field_ident);
                 quote! {
                     #[doc = "Obtain a reference to the inner MMIO field `"]
                     #[doc = stringify!(#field_ident)]
@@ -275,7 +278,30 @@ impl FieldParser {
                         }
                     }
 
-                    #[doc = "Obtain a reference to the inner MMIO field `"]
+                    #[doc = "Obtain a shared instace of the inner MMIO field `"]
+                    #[doc = stringify!(#field_ident)]
+                    #[doc = "`."]
+                    /// This variant only allow access to non-mutable methods of the MMIO block,
+                    /// but only requires a shared reference to the outer MMIO block.
+                    ///
+                    /// # Lifetime and Safety
+                    ///
+                    /// The lifetime of the returned inner MMIO block is static which
+                    /// allows independent usage of the inner block and arbitrary
+                    /// creation of of multiple inner blocks for the same peripheral.
+                    /// If you create multiple instances of this handle at the same time,
+                    /// you are responsible for ensuring that there are no read-modify-write
+                    /// races on any of the registers.
+                    #[inline]
+                    pub fn #field_ident_shared(&self) -> derive_mmio::SharedInnerMmio<#inner_mmio_path<'_>> {
+                        derive_mmio::SharedInnerMmio::__new_internal(
+                            unsafe {
+                                self.#steal_func_unchecked_name()
+                            }
+                        )
+                    }
+
+                    #[doc = "Steal inner MMIO field `"]
                     #[doc = stringify!(#field_ident)]
                     #[doc = "`."]
                     #[doc = "# Lifetime and Safety"]
@@ -288,6 +314,34 @@ impl FieldParser {
                     #[doc = "races on any of the registers."]
                     #[inline]
                     pub unsafe fn #steal_func_name(&mut self) -> #inner_mmio_path<'static> {
+                        unsafe { self.#steal_func_unchecked_name() }
+                    }
+
+                    #[doc = "Steal a shared instance of the inner MMIO field `"]
+                    #[doc = stringify!(#field_ident)]
+                    #[doc = "`."]
+                    /// This variant only allow access to non-mutable methods of the MMIO block,
+                    /// but only requires a shared reference to the outer MMIO block.
+                    ///
+                    /// # Lifetime and Safety
+                    ///
+                    /// The lifetime of the returned inner MMIO block is static which
+                    /// allows independent usage of the inner block and arbitrary
+                    /// creation of of multiple inner blocks for the same peripheral.
+                    /// If you create multiple instances of this handle at the same time,
+                    /// you are responsible for ensuring that there are no read-modify-write
+                    /// races on any of the registers. Furthermore, this method only requires
+                    /// shared access to the outer MMIO block.
+                    #[inline]
+                    pub unsafe fn #steal_func_name_shared(&self) -> derive_mmio::SharedInnerMmio<#inner_mmio_path<'static>> {
+                        derive_mmio::SharedInnerMmio::__new_internal(
+                            unsafe {
+                                self.#steal_func_unchecked_name()
+                            }
+                        )
+                    }
+
+                    unsafe fn #steal_func_unchecked_name(&self) -> #inner_mmio_path<'static> {
                         let ptr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
                         unsafe {
                             #type_path::new_mmio(ptr)
