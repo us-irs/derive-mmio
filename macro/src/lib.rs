@@ -329,6 +329,7 @@ impl FieldParser {
             #[doc = ""]
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
             #[inline(always)]
+            #[rustversion::attr(since(1.83), const)]
             pub fn #pointer_fn_name(&mut self) -> *mut #type_path{
                 unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) }
             }
@@ -396,6 +397,7 @@ impl FieldParser {
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
             #[doc = "The `add` method method of the pointer can be used to access entries of the array at higher indices."]
             #[inline(always)]
+            #[rustversion::attr(since(1.83), const)]
             pub fn #pointer_fn_name(&mut self) -> *mut #array_type{
                 unsafe { (*self.ptr).#field_ident.as_mut_ptr() }
             }
