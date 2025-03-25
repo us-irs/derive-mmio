@@ -62,7 +62,9 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         .iter()
         .map(|field| (field, field.ident.as_ref().unwrap()))
         .filter(|(_field, field_ident)| !field_ident.to_string().starts_with("_"))
-        .map(|(field, field_ident)| field_parser.generate_access_methods(field, field_ident));
+        .map(|(field, field_ident)| {
+            field_parser.generate_access_methods(&ident, field, field_ident)
+        });
 
     let access_methods_quoted = quote! {
         #(#access_methods)*
@@ -83,25 +85,32 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         None
     } else {
         Some(quote! {
-            #[doc = "Create a new handle to this peripheral given an address."]
-            #[doc = ""]
-            #[doc = "# Safety"]
-            #[doc = ""]
-            #[doc = "See the safety notes for [`new_mmio`]."]
+            /// Create a new handle to this peripheral given an address.
+            ///
+            /// # Safety
+            ///
+            /// See the safety notes for [Self::new_mmio].
             pub const unsafe fn new_mmio_at(addr: usize) -> #wrapper_ident<'static> {
                 Self::new_mmio(addr as *mut #ident)
             }
 
-            #[doc = "Create a new handle to this peripheral."]
-            #[doc = ""]
-            #[doc = "# Safety"]
-            #[doc = ""]
-            #[doc = "The pointer given must have suitable alignment, and point to an object"]
-            #[doc = "which matches the layout given by the structure pointed to."]
-            #[doc = ""]
-            #[doc = "If you create multiple instances of this handle at the same time,"]
-            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
-            #[doc = "races on any of the registers."]
+            /// Create a new handle to this peripheral.
+            ///
+            /// # Safety
+            ///
+            /// The pointer given must have suitable alignment, and point to an object
+            /// which matches the layout given by the structure pointed to.
+            ///
+            /// If you create multiple instances of this handle at the same time,
+            /// you are responsible for ensuring that there are no read-modify-write
+            /// races on any of the registers.
+            ///
+            /// The [core::marker::Send] trait is implemented for the MMIO handle.
+            /// However, there are cases where this implementation might be incorrect, for example
+            /// if an MMIO handle was created for a core-local private address.
+            ///
+            /// In that case, it it is recommended to wrap the MMIO handle in a newtype structure
+            /// and [un-implement Send](https://doc.rust-lang.org/nomicon/send-and-sync.html).
             #[inline]
             pub const unsafe fn new_mmio(ptr: *mut #ident) -> #wrapper_ident<'static> {
                 #wrapper_ident {
@@ -116,9 +125,9 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     // combine the fragments into the desired output code
     proc_macro::TokenStream::from(quote! {
-        #[doc = "An MMIO wrapper for [`"]
+        #[doc = "An MMIO wrapper for ["]
         #[doc = stringify!(#ident)]
-        #[doc = "`]"]
+        #[doc = "]"]
         pub struct #wrapper_ident<'a> {
             ptr: *mut #ident,
             phantom: core::marker::PhantomData<&'a ()>,
@@ -157,6 +166,16 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
         unsafe impl derive_mmio::_MmioMarker for #wrapper_ident<'_> {}
 
+        /// The [core::marker::Send] trait is unsafely implemented because sending a register block pointer to another
+        /// thread should not be an issue for most use-cases.
+        ///
+        /// However, there are cases where this [core::marker::Send] implementation might be
+        /// invalid, for example if an MMIO handle was created for a core-local private address.
+        ///
+        /// In that case, it it is recommended to un-implement [un-implement Send](https://doc.rust-lang.org/nomicon/send-and-sync.html).
+        /// on the register block structure.
+        unsafe impl core::marker::Send for #wrapper_ident<'_> where #ident: core::marker::Send {}
+
         impl #ident {
             #bound_check_func
 
@@ -187,7 +206,12 @@ struct FieldParser {
 
 impl FieldParser {
     /// Convert a field into a set of methods that operate on that field
-    fn generate_access_methods(&mut self, field: &Field, field_ident: &Ident) -> TokenStream {
+    fn generate_access_methods(
+        &mut self,
+        ident: &Ident,
+        field: &Field,
+        field_ident: &Ident,
+    ) -> TokenStream {
         let mut access = None;
         for attr in field.attrs.iter() {
             if attr.path().is_ident("mmio") {
@@ -199,7 +223,11 @@ impl FieldParser {
                 for meta in nested {
                     if let Meta::Path(path) = meta {
                         if path.is_ident("inner") {
-                            return self.generate_access_method_for_inner_block(field, field_ident);
+                            return self.generate_access_method_for_inner_block(
+                                ident,
+                                field,
+                                field_ident,
+                            );
                         } else if path.is_ident("RO") {
                             if access.replace(Access::ReadOnly).is_some() {
                                 abort_call_site!("`#[mmio(...)]` found second access argument");
@@ -226,10 +254,22 @@ impl FieldParser {
         let mut output = TokenStream::new();
         match &field.ty {
             syn::Type::Array(type_array) => {
-                self.generate_array_access_methods(access, field_ident, type_array, &mut output);
+                self.generate_array_access_methods(
+                    ident,
+                    access,
+                    field_ident,
+                    type_array,
+                    &mut output,
+                );
             }
             syn::Type::Path(type_path) => {
-                self.generate_field_access_methods(access, field_ident, type_path, &mut output);
+                self.generate_field_access_methods(
+                    ident,
+                    access,
+                    field_ident,
+                    type_path,
+                    &mut output,
+                );
             }
             _ => (),
         }
@@ -240,6 +280,7 @@ impl FieldParser {
     /// Generate access methods for fields that are MMIO blocks.
     pub fn generate_access_method_for_inner_block(
         &mut self,
+        ident: &Ident,
         field: &Field,
         field_ident: &Ident,
     ) -> TokenStream {
@@ -269,12 +310,12 @@ impl FieldParser {
                 });
                 let steal_func_name = format_ident!("steal_{}", field_ident);
                 quote! {
-                    #[doc = "Obtain a reference to the inner MMIO field `"]
-                    #[doc = stringify!(#field_ident)]
-                    #[doc = "`."]
+                    #[doc = "Obtain a reference to the inner MMIO field "]
+                    #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+                    #[doc = ""]
                     #[doc = "# Lifetime"]
                     #[doc = ""]
-                    #[doc = "The lifetime of the returned inner MMIO block is tied to the "]
+                    #[doc = "The lifetime of the returned inner MMIO block is tied to the"]
                     #[doc = "lifetime of this structure"]
                     #[inline]
                     pub fn #field_ident(&mut self) -> #inner_mmio_path<'_> {
@@ -283,9 +324,9 @@ impl FieldParser {
                         }
                     }
 
-                    #[doc = "Obtain a reference to the inner MMIO field `"]
-                    #[doc = stringify!(#field_ident)]
-                    #[doc = "`."]
+                    #[doc = "Obtain a reference to the inner MMIO field "]
+                    #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+                    #[doc = ""]
                     #[doc = "# Lifetime and Safety"]
                     #[doc = ""]
                     #[doc = "The lifetime of the returned inner MMIO block is static which"]
@@ -313,6 +354,7 @@ impl FieldParser {
     }
     fn generate_field_access_methods(
         &self,
+        ident: &Ident,
         access: Access,
         field_ident: &Ident,
         type_path: &TypePath,
@@ -324,9 +366,9 @@ impl FieldParser {
         let modify_fn_name = format_ident!("modify_{}", field_ident);
 
         access_methods.append_all(quote! {
-            #[doc = "Obtain a pointer to the `"]
-            #[doc = stringify!(#field_ident)]
-            #[doc = "` register."]
+            #[doc = "Obtain a pointer to the "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = " register."]
             #[doc = ""]
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
             #[inline(always)]
@@ -334,9 +376,9 @@ impl FieldParser {
                 unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) }
             }
 
-            #[doc = "Read the `"]
-            #[doc = stringify!(#field_ident)]
-            #[doc = "` register."]
+            #[doc = "Read the "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = " register."]
             #[inline(always)]
             pub fn #read_fn_name(&mut self) -> #type_path {
                 let addr = self.#pointer_fn_name();
@@ -348,9 +390,9 @@ impl FieldParser {
 
         if access == Access::ReadWrite {
             access_methods.append_all(quote! {
-                #[doc = "Write the `"]
-                #[doc = stringify!(#field_ident)]
-                #[doc = "` register."]
+                #[doc = "Write the "]
+                #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+                #[doc = " register."]
                 #[inline(always)]
                 pub fn #write_fn_name(&mut self, value: #type_path) {
                     let addr = self.#pointer_fn_name();
@@ -359,9 +401,9 @@ impl FieldParser {
                     }
                 }
 
-                #[doc = "Read-Modify-Write the `"]
-                #[doc = stringify!(#field_ident)]
-                #[doc = "` register."]
+                #[doc = "Read-Modify-Write the "]
+                #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+                #[doc = " register."]
                 #[inline]
                 pub fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#type_path) -> #type_path {
                     let value = self. #read_fn_name();
@@ -373,6 +415,7 @@ impl FieldParser {
     }
     fn generate_array_access_methods(
         &self,
+        ident: &Ident,
         access: Access,
         field_ident: &Ident,
         type_array: &TypeArray,
@@ -390,9 +433,9 @@ impl FieldParser {
         let error_type = quote! { derive_mmio::OutOfBoundsError };
 
         access_methods.append_all(quote! {
-            #[doc = "Obtain a pointer to the `"]
-            #[doc = stringify!(#field_ident)]
-            #[doc = "` first entry register array."]
+            #[doc = "Obtain a pointer to the "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = " first entry register array."]
             #[doc = ""]
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
             #[doc = "The `add` method method of the pointer can be used to access entries of the array at higher indices."]
@@ -401,10 +444,9 @@ impl FieldParser {
                 unsafe { (*self.ptr).#field_ident.as_mut_ptr() }
             }
 
-            #[doc = "Read the `"]
-            #[doc = stringify!(#field_ident)]
-            #[doc = ""]
-            #[doc = "` register."]
+            #[doc = "Read the "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = " register."]
             #[doc = ""]
             #[doc = "# Safety "]
             #[doc = ""]
@@ -419,10 +461,9 @@ impl FieldParser {
                 }
             }
 
-            #[doc = "Read the `"]
-            #[doc = stringify!(#field_ident)]
-            #[doc = ""]
-            #[doc = "` register."]
+            #[doc = "Read the "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = " register."]
             #[doc = ""]
             #[doc = "This function also peforms bound checking."]
             #[inline]
@@ -440,9 +481,9 @@ impl FieldParser {
 
         if access == Access::ReadWrite {
             access_methods.append_all(quote! {
-                #[doc = "Write the `"]
-                #[doc = stringify!(#field_ident)]
-                #[doc = "` register."]
+                #[doc = "Write the "]
+                #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+                #[doc = " register."]
                 #[doc = "# Safety "]
                 #[doc = ""]
                 #[doc = "This function does not perform bounds checking and performs a volatile "]
@@ -456,9 +497,9 @@ impl FieldParser {
                     }
                 }
 
-                #[doc = "Write the `"]
-                #[doc = stringify!(#field_ident)]
-                #[doc = "` register."]
+                #[doc = "Write the "]
+                #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+                #[doc = " register."]
                 #[doc = ""]
                 #[doc = "This function also peforms bound checking."]
                 #[inline]
@@ -475,9 +516,9 @@ impl FieldParser {
                     Ok(())
                 }
 
-                #[doc = "Read-Modify-Write the `"]
-                #[doc = stringify!(#field_ident)]
-                #[doc = "` register."]
+                #[doc = "Read-Modify-Write the "]
+                #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+                #[doc = " register."]
                 #[doc = ""]
                 #[doc = "This function does not perform bounds checking and performs a volatile "]
                 #[doc = "read and a volatile write on a raw pointer with the given offset which might lead to "]
@@ -493,9 +534,9 @@ impl FieldParser {
                     self. #unchecked_write_fn_name(index, new_value);
                 }
 
-                #[doc = "Read-Modify-Write the `"]
-                #[doc = stringify!(#field_ident)]
-                #[doc = "` register."]
+                #[doc = "Read-Modify-Write the "]
+                #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+                #[doc = " register."]
                 #[doc = ""]
                 #[doc = "This function also peforms bound checking."]
                 #[inline]
