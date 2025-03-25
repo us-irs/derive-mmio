@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `#[mmio(inner)]`
 - Added support for array fields
 - Added unsafe `clone` method on `Mmio` structure
+- Implement `Send` for generated MMIO block.
 
 ## [v0.3.0] - 2025-02-26
 
