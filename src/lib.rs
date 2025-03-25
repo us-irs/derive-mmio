@@ -241,11 +241,14 @@ The following attributes are supported:
 
 ### Field attributes
 
+The access permission attributes work for array fields as well.
+
 - `#[mmio(PureRead)]`: The field is read-only. The read does not have side effects, and the
-   generated read function do not require a mutable reference to the MMIO block.
-- `#[mmio(Read)]`: The field can be read, but the read has side effects. The generated function
-   requires a mutable reference to the MMIO block.
-- `#[mmio(Write)]`: The field can be written to. This will generate writer functions for the field.
+   generated reader function only requires a shared reference to the MMIO block.
+- `#[mmio(Read)]`: The field can be read, but the read has side effects. The generated reader
+   function requires a mutable reference to the MMIO block.
+- `#[mmio(Write)]`: The field can be written to. This will generate a writer function for the
+   field.
 - `#[mmio(Modify)]`: The field can be modified. This will generate a modify function for the field
    which performs a Read-Modify-Write operation.
 - `#[mmio(inner)]`: The field is a register block which also implements [Mmio].
