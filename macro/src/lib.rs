@@ -144,6 +144,12 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 }
             }
 
+            /// Retrieve the base pointer for this MMIO handle.
+            #[inline]
+            pub const unsafe fn ptr(&self) -> *mut #ident {
+                self.ptr
+            }
+
             #access_methods_quoted
         }
 
