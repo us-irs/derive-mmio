@@ -1,6 +1,14 @@
 /*!
 # `derive-mmio` - turning structures into MMIO access objects
 
+## Dependencies on generated code
+
+The generated code only requires one dependency:
+
+```toml
+rustversion = "1"
+```
+
 ## Rationale
 
 In C it is very common to create structures that refer to Memory-Mapped I/O (MMIO) peripherals:
