@@ -10,7 +10,7 @@
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-struct Uart {
+pub struct Uart {
     // this is read-write by default
     data: u32,
     // you can be explicit if you like

@@ -1,6 +1,6 @@
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-struct Uart {
+pub struct Uart {
     // you can be explicit if you like
     control: u32,
     some_array_0: [u32; 4],
