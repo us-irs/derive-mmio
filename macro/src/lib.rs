@@ -112,6 +112,8 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         })
     };
 
+    let vis = input.vis;
+
     // combine the fragments into the desired output code
     proc_macro::TokenStream::from(quote! {
         #[doc = "An MMIO wrapper for [`"]
@@ -142,6 +144,12 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                     ptr: self.ptr,
                     phantom: core::marker::PhantomData,
                 }
+            }
+
+            /// Retrieve the base pointer for this MMIO handle.
+            #[inline]
+            #vis const unsafe fn ptr(&self) -> *mut #ident {
+                self.ptr
             }
 
             #access_methods_quoted
