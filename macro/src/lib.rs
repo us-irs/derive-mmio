@@ -399,20 +399,31 @@ impl FieldParser {
         type_path: &TypePath,
         access_methods: &mut TokenStream,
     ) {
-        let pointer_fn_name = format_ident!("pointer_to_{}", field_ident);
+        let mut_pointer_fn_name = format_ident!("pointer_mut_to_{}", field_ident);
+        let shared_pointer_fn_name = format_ident!("pointer_to_{}", field_ident);
         let read_fn_name = format_ident!("read_{}", field_ident);
         let write_fn_name = format_ident!("write_{}", field_ident);
         let modify_fn_name = format_ident!("modify_{}", field_ident);
 
         access_methods.append_all(quote! {
-            #[doc = "Obtain a pointer to the "]
+            #[doc = "Obtain a mutable pointer to the "]
             #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
             #[doc = " register."]
             #[doc = ""]
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
             #[inline(always)]
-            pub fn #pointer_fn_name(&mut self) -> *mut #type_path{
+            pub fn #mut_pointer_fn_name(&mut self) -> *mut #type_path{
                 unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) }
+            }
+
+            #[doc = "Obtain a shared pointer to the "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = " register."]
+            #[doc = ""]
+            #[doc = "Never create a reference from this pointer - only use read/read_volatile methods on it."]
+            #[inline(always)]
+            pub fn #shared_pointer_fn_name(&self) -> *const #type_path{
+                unsafe { core::ptr::addr_of!((*self.ptr).#field_ident) }
             }
         });
         if let Some(read_access) = access.read {
@@ -424,7 +435,7 @@ impl FieldParser {
                 #[doc = " register."]
                 #[inline(always)]
                 pub fn #read_fn_name(&#opt_mut self) -> #type_path {
-                    let addr = unsafe { core::ptr::addr_of!((*self.ptr).#field_ident) };
+                    let addr = self.#shared_pointer_fn_name();
                     unsafe {
                         addr.read_volatile()
                     }
@@ -438,7 +449,7 @@ impl FieldParser {
                 #[doc = " register."]
                 #[inline(always)]
                 pub fn #write_fn_name(&mut self, value: #type_path) {
-                    let addr = self.#pointer_fn_name();
+                    let addr = self.#mut_pointer_fn_name();
                     unsafe {
                         addr.write_volatile(value)
                     }
@@ -452,7 +463,7 @@ impl FieldParser {
             #[doc = " register."]
             #[inline]
             pub fn #modify_fn_name<F>(&mut self, f: F) where F: FnOnce(#type_path) -> #type_path {
-                let value = self. #read_fn_name();
+                let value = self.#read_fn_name();
                 let new_value = f(value);
                 self. #write_fn_name(new_value);
             }
@@ -470,7 +481,8 @@ impl FieldParser {
     ) {
         let array_type = &type_array.elem;
         let array_len = &type_array.len;
-        let pointer_fn_name = format_ident!("pointer_to_{}_start", field_ident);
+        let mut_pointer_fn_name = format_ident!("pointer_mut_to_{}", field_ident);
+        let shared_pointer_fn_name = format_ident!("pointer_to_{}", field_ident);
         let read_fn_name = format_ident!("read_{}", field_ident);
         let unchecked_read_fn_name = format_ident!("read_{}_unchecked", field_ident);
         let write_fn_name = format_ident!("write_{}", field_ident);
@@ -480,15 +492,26 @@ impl FieldParser {
         let error_type = quote! { derive_mmio::OutOfBoundsError };
 
         access_methods.append_all(quote! {
-            #[doc = "Obtain a pointer to the "]
+            #[doc = "Obtain a mutable pointer to the "]
             #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
             #[doc = " first entry register array."]
             #[doc = ""]
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
             #[doc = "The `add` method method of the pointer can be used to access entries of the array at higher indices."]
             #[inline(always)]
-            pub fn #pointer_fn_name(&mut self) -> *mut #array_type{
+            pub fn #mut_pointer_fn_name(&mut self) -> *mut #array_type{
                 unsafe { (*self.ptr).#field_ident.as_mut_ptr() }
+            }
+
+            #[doc = "Obtain a shared pointer to the "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = " first entry register array."]
+            #[doc = ""]
+            #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
+            #[doc = "The `add` method method of the pointer can be used to access entries of the array at higher indices."]
+            #[inline(always)]
+            pub fn #shared_pointer_fn_name(&self) -> *const #array_type{
+                unsafe { (*self.ptr).#field_ident.as_ptr() }
             }
         });
 
@@ -550,7 +573,7 @@ impl FieldParser {
                 pub unsafe fn #unchecked_write_fn_name(&mut self, index: usize, value: #array_type) {
                     // Safety: We're performing a volatile read from a valid memory location
                     unsafe {
-                        core::ptr::write_volatile(self.#pointer_fn_name().add(index), value)
+                        core::ptr::write_volatile(self.#mut_pointer_fn_name().add(index), value)
                     }
                 }
 
