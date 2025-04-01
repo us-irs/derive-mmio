@@ -520,7 +520,7 @@ impl FieldParser {
                 #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
                 #[doc = " register."]
                 #[doc = ""]
-                #[doc = "This function also peforms bound checking."]
+                #[doc = "This function also performs bound checking."]
                 #[inline]
                 pub fn #read_fn_name(
                     &#opt_mut self,
@@ -558,7 +558,7 @@ impl FieldParser {
                 #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
                 #[doc = " register."]
                 #[doc = ""]
-                #[doc = "This function also peforms bound checking."]
+                #[doc = "This function also performs bound checking."]
                 #[inline]
                 pub fn #write_fn_name(
                     &mut self,
@@ -599,7 +599,7 @@ impl FieldParser {
                 #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
                 #[doc = " register."]
                 #[doc = ""]
-                #[doc = "This function also peforms bound checking."]
+                #[doc = "This function also performs bound checking."]
                 #[inline]
                 pub fn #modify_fn_name(
                     &mut self,

@@ -22,7 +22,7 @@ In Rust, we have some issues:
    side-effects (like writing to a FIFO), it is important that those
    accesses are volatile.
 2. We must never construct a reference to an MMIO peripheral, because
-   references are, well, dereferencable, and LLVM is free to derefererence
+   references are, well, dereferenceable, and LLVM is free to dereference
    them whenever it likes. This might cause unexpected reads of the MMIO
    peripheral and is considered UB.
 3. Accessing a field of a struct without constructing a pointer to it used
@@ -251,7 +251,7 @@ The following attributes are supported:
 
 - `#[mmio(no_ctors)]`: Omit the generation of constructor functions like `new_mmio_at` and
    `new_mmio`. This allows users to specify own custom constructors, for example to constrain
-   or check the allowed base adresses.
+   or check the allowed base addresses.
 
 ### Field attributes
 

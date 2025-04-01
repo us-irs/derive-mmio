@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The `fn new_mmio` and `fn new_mmio_at` functions are now cost
 * We no longer emit a different version of `fn new_mmio_at` using exposed
-  provenence on Rust version 1.84 or higher - because that API is not (yet)
+  provenance on Rust version 1.84 or higher - because that API is not (yet)
   const.
 
 ## [v0.2.0] - 2025-02-14
