@@ -3,7 +3,7 @@
 #[repr(C)]
 struct Uart {
     // Standalone modification is not allowed, Read and Write access need to be specified
-    // explicitely.
+    // explicitly.
     #[mmio(Modify)]
     fifo: u32,
 }
