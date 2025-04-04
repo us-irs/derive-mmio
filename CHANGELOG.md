@@ -28,8 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-* The `fn new_mmio` and `fn new_mmio_at` functions are now cost
-* We no longer emit a different version of `fn new_mmio_at` using exposed
+- The `fn new_mmio` and `fn new_mmio_at` functions are now cost
+- We no longer emit a different version of `fn new_mmio_at` using exposed
   provenance on Rust version 1.84 or higher - because that API is not (yet)
   const.
 
@@ -37,18 +37,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* `pointer_to_xxx` methods
-* Support for `mmio(RO)` and `mmio(RW)` attributes to mark fields as read-only or read-write
-* A check for padding within the struct (which is not allowed)
+- `pointer_to_xxx` methods
+- Support for `mmio(RO)` and `mmio(RW)` attributes to mark fields as read-only or read-write
+- A check for padding within the struct (which is not allowed)
 
 ### Changed
 
-* `read_xxx` methods now require `&mut self`
+- `read_xxx` methods now require `&mut self`
 
 ## [v0.1.0] - 2025-02-14
 
-* First release
-* Provides `read_xxx`, `write_xxx` and `modify_xxx` methods
+- First release
+- Provides `read_xxx`, `write_xxx` and `modify_xxx` methods
 
 [Unreleased]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.4.0...HEAD
 [v0.4.0]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.4.0...derive-mmio-v0.4.0
