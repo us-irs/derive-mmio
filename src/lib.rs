@@ -286,9 +286,9 @@ impl Display for OutOfBoundsError {
     }
 }
 
-pub struct SharedInnerMmio<T>(T);
+pub struct SharedInner<T>(T);
 
-impl<T> SharedInnerMmio<T> {
+impl<T> SharedInner<T> {
     #[doc(hidden)]
     pub fn __new_internal(t: T) -> Self {
         Self(t)
@@ -299,7 +299,7 @@ impl<T> SharedInnerMmio<T> {
     }
 }
 
-impl<T> Deref for SharedInnerMmio<T> {
+impl<T> Deref for SharedInner<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
