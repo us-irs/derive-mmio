@@ -58,4 +58,9 @@ fn main() {
     let mmio_uart_clone = unsafe { mmio_uart.clone() };
     let status = mmio_uart_clone.read_status();
     assert_eq!(status, 0xF);
+
+    // Pointer access does not require a mutable handle.
+    let data_ptr = mmio_uart_clone.pointer_to_data();
+    let data = unsafe { core::ptr::read_volatile(data_ptr) };
+    assert_eq!(data, 0xB);
 }
