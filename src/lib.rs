@@ -274,7 +274,7 @@ If no permission access modifiers were specified, the library will default to
 */
 
 #![no_std]
-use core::fmt::Display;
+use core::{fmt::Display, ops::Deref};
 
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -283,6 +283,27 @@ pub struct OutOfBoundsError(pub usize);
 impl Display for OutOfBoundsError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "out of bounds access at index {}", self.0)
+    }
+}
+
+pub struct SharedInnerMmio<T>(T);
+
+impl<T> SharedInnerMmio<T> {
+    #[doc(hidden)]
+    pub fn __new_internal(t: T) -> Self {
+        Self(t)
+    }
+
+    pub fn inner(&self) -> &T {
+        &self.0
+    }
+}
+
+impl<T> Deref for SharedInnerMmio<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner()
     }
 }
 
