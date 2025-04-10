@@ -428,6 +428,7 @@ impl FieldParser {
                         )
                     }
 
+                    #[doc(hidden)]
                     unsafe fn #steal_func_unchecked_name(&self) -> #inner_mmio_path<'static> {
                         let ptr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
                         unsafe {
