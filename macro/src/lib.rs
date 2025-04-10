@@ -381,8 +381,8 @@ impl FieldParser {
                     #[doc = "you are responsible for ensuring that there are no read-modify-write"]
                     #[doc = "races on any of the registers."]
                     #[inline]
-                    pub fn #field_ident_shared(&self) -> derive_mmio::SharedInnerMmio<#inner_mmio_path<'_>> {
-                        derive_mmio::SharedInnerMmio::__new_internal(
+                    pub fn #field_ident_shared(&self) -> derive_mmio::SharedInner<#inner_mmio_path<'_>> {
+                        derive_mmio::SharedInner::__new_internal(
                             unsafe {
                                 self.#steal_func_unchecked_name()
                             }
@@ -420,8 +420,8 @@ impl FieldParser {
                     #[doc = "you are responsible for ensuring that there are no read-modify-write"]
                     #[doc = "races on any of the registers."]
                     #[inline]
-                    pub unsafe fn #steal_func_name_shared(&self) -> derive_mmio::SharedInnerMmio<#inner_mmio_path<'static>> {
-                        derive_mmio::SharedInnerMmio::__new_internal(
+                    pub unsafe fn #steal_func_name_shared(&self) -> derive_mmio::SharedInner<#inner_mmio_path<'static>> {
+                        derive_mmio::SharedInner::__new_internal(
                             unsafe {
                                 self.#steal_func_unchecked_name()
                             }
