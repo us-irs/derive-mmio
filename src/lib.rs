@@ -79,7 +79,7 @@ struct MmioUart {
 }
 // some methods on the 'handle' type
 impl MmioUart {
-    pub fn pointer_to_data(&mut self) -> *mut u32 {
+    pub fn pointer_to_data(&self) -> *mut u32 {
         unsafe { &raw mut (*self.ptr).data }
     }
     pub fn read_data(&self) -> u32 {

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `pointer_to_${field}` methods only require shared access to the MMIO handle now.
+
 ## [v0.4.0] - 2025-04-04
 
 ### Changed

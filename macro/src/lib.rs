@@ -463,9 +463,13 @@ impl FieldParser {
             #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
             #[doc = " register."]
             #[doc = ""]
+            #[doc = "This function allows modification through the pointer but does not require"]
+            #[doc = "mutable access to the MMIO handle."]
+            #[doc = "The caller should specify the correct mutability depending on how the pointer is used."]
+            #[doc = ""]
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
             #[inline(always)]
-            pub fn #pointer_fn_name(&mut self) -> *mut #type_path{
+            pub fn #pointer_fn_name(&self) -> *mut #type_path{
                 unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) }
             }
         });
@@ -538,10 +542,14 @@ impl FieldParser {
             #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
             #[doc = " first entry register array."]
             #[doc = ""]
+            #[doc = "This function allows modification through the pointer but does not require"]
+            #[doc = "mutable access to the MMIO handle."]
+            #[doc = "The caller should specify the correct mutability depending on how the pointer is used."]
+            #[doc = ""]
             #[doc = "Never create a reference from this pointer - only use read/write/read_volatile/write_volatile methods on it."]
             #[doc = "The `add` method method of the pointer can be used to access entries of the array at higher indices."]
             #[inline(always)]
-            pub fn #pointer_fn_name(&mut self) -> *mut #array_type{
+            pub fn #pointer_fn_name(&self) -> *mut #array_type{
                 unsafe { (*self.ptr).#field_ident.as_mut_ptr() }
             }
         });
