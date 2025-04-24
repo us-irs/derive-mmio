@@ -5,10 +5,12 @@ fn all_tests() {
     t.pass("tests/inner_mmio.rs");
     t.pass("tests/no_ctors.rs");
     t.pass("tests/array_fields.rs");
+    t.pass("tests/inner_mmio_array.rs");
 
     t.compile_fail("tests/no_compile/no_modify.rs");
     t.compile_fail("tests/no_compile/read_only.rs");
     t.compile_fail("tests/no_compile/inner_only_shared.rs");
+    t.compile_fail("tests/no_compile/inner_array_invalid_type.rs");
     t.compile_fail("tests/no_compile/double_read.rs");
     t.compile_fail("tests/no_compile/duplicate_field_attr.rs");
     t.compile_fail("tests/no_compile/modify_standalone.rs");
