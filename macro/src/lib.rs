@@ -455,7 +455,7 @@ impl FieldParser {
                 Ok(unsafe { self.#field_ident_shared_unchecked(index) })
             }
 
-            #[doc = "Obtain a shared instace of the inner MMIO field `"]
+            #[doc = "Obtain a shared instance of the inner MMIO field `"]
             #[doc = stringify!(#field_ident)]
             #[doc = "`."]
             #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
