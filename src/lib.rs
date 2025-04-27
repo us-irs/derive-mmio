@@ -364,15 +364,13 @@ The following field types are supported and tested:
 - Arrays of [`u32`]
 - Bitfields implemented with [`bitbybit::bitfield`]
 - Other `#[derive(Mmio)]` types, if the field is annotated with the
-  `#[mmio(inner)]` attribute.
+  `#[mmio(inner)]` attribute. Arrays of inner MMIO types are also allowed.
 
 [`bitbybit::bitfield`]: https://crates.io/crates/bitbybit
 
 Other `repr(transparent)` types should work, but you should be careful to ensure
 that every field corresponds 1:1 with an MMIO register and that they are the
 appropriate size for your CPU architecture.
-
-Currently 'array of inner' fields are not supported. PRs for that are welcome.
 
 If you accidentally introduce padding (or, if the sum of the size of the
 individual fields isn't the same as the size of the overall `struct`), you will

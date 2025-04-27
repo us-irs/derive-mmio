@@ -32,6 +32,9 @@ pub struct Uart {
     bank_0: inner::UartBank,
     #[mmio(inner)]
     bank_1: inner::UartBank,
+    // Arrays also work.
+    #[mmio(inner)]
+    array: [inner::UartBank; 2],
 }
 
 fn main() {
@@ -39,6 +42,7 @@ fn main() {
         control: 0xC,
         bank_0: inner::UartBank::fake(),
         bank_1: inner::UartBank::fake(),
+        array: [inner::UartBank::fake(), inner::UartBank::fake()],
     };
 
     // Safety: We're pointing at a real object
@@ -67,4 +71,16 @@ fn main() {
     // Can only use shared API here.
     let bank0_shared = mmio_uart.bank_0_shared();
     assert_eq!(bank0_shared.read_data(), 0x42);
+
+    // Access inner MMIO array.
+    let mut bank_array_0 = mmio_uart.array(0).unwrap();
+    bank_array_0.write_data(0x10);
+    bank_array_0.write_status(0x11);
+    assert_eq!(bank_array_0.read_data(), 0x10);
+    assert_eq!(bank_array_0.read_status(), 0x11);
+
+    // Only shared API.
+    let bank_array_1 = mmio_uart.array_shared(1).unwrap();
+    assert_eq!(bank_array_1.read_data(), 0x2);
+    assert_eq!(bank_array_1.read_status(), 0x3);
 }

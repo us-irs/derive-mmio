@@ -247,7 +247,7 @@ impl FieldParser {
                 for meta in nested {
                     if let Meta::Path(path) = meta {
                         if path.is_ident("inner") {
-                            return self.generate_access_method_for_inner_block(
+                            return self.generate_access_method_for_inner_mmio_field(
                                 ident,
                                 field,
                                 field_ident,
@@ -317,7 +317,7 @@ impl FieldParser {
     }
 
     /// Generate access methods for fields that are MMIO blocks.
-    pub fn generate_access_method_for_inner_block(
+    pub fn generate_access_method_for_inner_mmio_field(
         &mut self,
         ident: &Ident,
         field: &Field,
@@ -325,126 +325,387 @@ impl FieldParser {
     ) -> TokenStream {
         match &field.ty {
             syn::Type::Path(type_path) => {
-                // Get the segments of the type path
-                let mut segments = type_path.path.segments.clone();
-
-                if let Some(last_segment) = segments.last_mut() {
-                    // Prepend "Mmio" to the last segment's identifier
-                    let new_ident = syn::Ident::new(
-                        &format!("Mmio{}", last_segment.ident),
-                        last_segment.span(),
+                self.generate_access_method_for_single_inner_mmio(ident, field_ident, type_path)
+            }
+            syn::Type::Array(array_type) => {
+                if let syn::Type::Path(element_type) = array_type.elem.as_ref() {
+                    self.generate_access_method_for_inner_mmio_array(
+                        ident,
+                        field_ident,
+                        array_type,
+                        element_type,
+                    )
+                } else {
+                    abort!(
+                        array_type.span(),
+                        "inner field array {} does not have a valid array type",
+                        field.to_token_stream()
                     );
-
-                    // Modify the last segment to be "Mmio<LastSegment>"
-                    last_segment.ident = new_ident;
-                }
-
-                // Create the new Path
-                let inner_mmio_path = Path {
-                    segments,
-                    leading_colon: type_path.path.leading_colon,
-                };
-                self.bound_checks.push(quote! {
-                    derive_mmio::is_mmio::<#inner_mmio_path>();
-                });
-                let field_ident_shared = format_ident!("{}_shared", field_ident);
-                let steal_func_name = format_ident!("steal_{}", field_ident);
-                let steal_func_name_shared = format_ident!("steal_{}_shared", field_ident);
-                let steal_func_unchecked_name = format_ident!("__steal_{}_unchecked", field_ident);
-                quote! {
-                    #[doc = "Obtain a reference to the inner MMIO field "]
-                    #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
-                    #[doc = ""]
-                    #[doc = "# Lifetime"]
-                    #[doc = ""]
-                    #[doc = "The lifetime of the returned inner MMIO block is tied to the"]
-                    #[doc = "lifetime of this structure"]
-                    #[inline]
-                    pub fn #field_ident(&mut self) -> #inner_mmio_path<'_> {
-                        unsafe {
-                            self.#steal_func_name()
-                        }
-                    }
-
-                    #[doc = "Obtain a shared instace of the inner MMIO field `"]
-                    #[doc = stringify!(#field_ident)]
-                    #[doc = "`."]
-                    #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
-                    #[doc = "but only requires a shared reference to the outer MMIO block."]
-                    #[doc = ""]
-                    #[doc = "# Lifetime and Safety"]
-                    #[doc = ""]
-                    #[doc = "The lifetime of the returned inner MMIO block is static which"]
-                    #[doc = "allows independent usage of the inner block and arbitrary"]
-                    #[doc = "creation of of multiple inner blocks for the same peripheral."]
-                    #[doc = "If you create multiple instances of this handle at the same time,"]
-                    #[doc = "you are responsible for ensuring that there are no read-modify-write"]
-                    #[doc = "races on any of the registers."]
-                    #[inline]
-                    pub fn #field_ident_shared(&self) -> derive_mmio::SharedInner<#inner_mmio_path<'_>> {
-                        derive_mmio::SharedInner::__new_internal(
-                            unsafe {
-                                self.#steal_func_unchecked_name()
-                            }
-                        )
-                    }
-
-                    #[doc = "Steal inner MMIO field `"]
-                    #[doc = stringify!(#field_ident)]
-                    #[doc = "`."]
-                    #[doc = "# Lifetime and Safety"]
-                    #[doc = ""]
-                    #[doc = "The lifetime of the returned inner MMIO block is static which"]
-                    #[doc = "allows independent usage of the inner block and arbitrary"]
-                    #[doc = "creation of of multiple inner blocks for the same peripheral."]
-                    #[doc = "If you create multiple instances of this handle at the same time,"]
-                    #[doc = "you are responsible for ensuring that there are no read-modify-write"]
-                    #[doc = "races on any of the registers."]
-                    #[inline]
-                    pub unsafe fn #steal_func_name(&mut self) -> #inner_mmio_path<'static> {
-                        unsafe { self.#steal_func_unchecked_name() }
-                    }
-
-                    #[doc = "Steal a shared instance of the inner MMIO field `"]
-                    #[doc = stringify!(#field_ident)]
-                    #[doc = "`."]
-                    #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
-                    #[doc = "but only requires a shared reference to the outer MMIO block."]
-                    #[doc = ""]
-                    #[doc = "# Lifetime and Safety"]
-                    #[doc = ""]
-                    #[doc = "The lifetime of the returned inner MMIO block is static which"]
-                    #[doc = "allows independent usage of the inner block and arbitrary"]
-                    #[doc = "creation of of multiple inner blocks for the same peripheral."]
-                    #[doc = "If you create multiple instances of this handle at the same time,"]
-                    #[doc = "you are responsible for ensuring that there are no read-modify-write"]
-                    #[doc = "races on any of the registers."]
-                    #[inline]
-                    pub unsafe fn #steal_func_name_shared(&self) -> derive_mmio::SharedInner<#inner_mmio_path<'static>> {
-                        derive_mmio::SharedInner::__new_internal(
-                            unsafe {
-                                self.#steal_func_unchecked_name()
-                            }
-                        )
-                    }
-
-                    #[doc(hidden)]
-                    unsafe fn #steal_func_unchecked_name(&self) -> #inner_mmio_path<'static> {
-                        let ptr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
-                        unsafe {
-                            #type_path::new_mmio(ptr)
-                        }
-                    }
                 }
             }
             _ => {
                 abort!(
+                    field.span(),
                     "inner field {} does not have a valid path",
                     field.to_token_stream()
                 );
             }
         }
     }
+
+    pub fn generate_access_method_for_inner_mmio_array(
+        &mut self,
+        ident: &Ident,
+        field_ident: &Ident,
+        array_type: &TypeArray,
+        element_type: &TypePath,
+    ) -> TokenStream {
+        let array_len = array_type.len.clone();
+        // Get the segments of the type path
+        let mut segments = element_type.path.segments.clone();
+
+        if let Some(last_segment) = segments.last_mut() {
+            // Prepend "Mmio" to the last segment's identifier
+            let new_ident =
+                syn::Ident::new(&format!("Mmio{}", last_segment.ident), last_segment.span());
+
+            // Modify the last segment to be "Mmio<LastSegment>"
+            last_segment.ident = new_ident;
+        }
+
+        // Create the new Path
+        let inner_mmio_path = Path {
+            segments,
+            leading_colon: element_type.path.leading_colon,
+        };
+        self.bound_checks.push(quote! {
+            derive_mmio::is_mmio::<#inner_mmio_path>();
+        });
+        let array_len_func = format_ident!("{}_array_len", field_ident);
+        let field_ident_unchecked = format_ident!("{}_unchecked", field_ident);
+
+        let field_ident_shared = format_ident!("{}_shared", field_ident);
+        let field_ident_shared_unchecked = format_ident!("{}_shared_unchecked", field_ident);
+
+        let steal_func_name = format_ident!("steal_{}", field_ident);
+        let steal_func_name_unchecked = format_ident!("steal_{}_unchecked", field_ident);
+
+        let steal_func_name_shared = format_ident!("steal_{}_shared", field_ident);
+        let steal_func_name_shared_unchecked =
+            format_ident!("steal_{}_shared_unchecked", field_ident);
+        let private_steal_unchecked_func_name = format_ident!("__steal_{}_unchecked", field_ident);
+        let error_type = quote! { derive_mmio::OutOfBoundsError };
+        quote! {
+            #[doc = "Obtain a reference to the inner MMIO field "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = ""]
+            #[doc = "# Lifetime"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is tied to the"]
+            #[doc = "lifetime of this structure"]
+            #[inline]
+            pub fn #field_ident(&mut self, index: usize) -> Result<#inner_mmio_path<'_>, #error_type> {
+                if index >= self.#array_len_func() {
+                    return Err(#error_type(index));
+                }
+                // Safety: Index was checked.
+                Ok(unsafe { self.#field_ident_unchecked(index) })
+            }
+
+            #[doc = "Obtain a reference to the inner MMIO field "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = ""]
+            #[doc = "# Lifetime"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is tied to the"]
+            #[doc = "lifetime of this structure"]
+            #[doc = ""]
+            #[doc = "# Safety"]
+            #[doc = ""]
+            #[doc = "This function does not perform bounds checking and creates a MMIO structure "]
+            #[doc = "based on a raw pointer which might lead to undefined behaviour on invalid offsets."]
+            #[doc = "Users MUST ensure that the offset is valid."]
+            #[inline]
+            pub unsafe fn #field_ident_unchecked(&mut self, index: usize) -> #inner_mmio_path<'_> {
+                unsafe {
+                    self.#steal_func_name_unchecked(index)
+                }
+            }
+
+            #[doc = "Obtain a shared instace of the inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
+            #[doc = "but only requires a shared reference to the outer MMIO block."]
+            #[doc = ""]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[inline]
+            pub fn #field_ident_shared(&self, index: usize) -> Result<derive_mmio::SharedInner<#inner_mmio_path<'_>>, #error_type> {
+                if index >= self.#array_len_func() {
+                    return Err(#error_type(index));
+                }
+                // Safety: Index was checked.
+                Ok(unsafe { self.#field_ident_shared_unchecked(index) })
+            }
+
+            #[doc = "Obtain a shared instance of the inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
+            #[doc = "but only requires a shared reference to the outer MMIO block."]
+            #[doc = ""]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[doc = ""]
+            #[doc = "This function does not perform bounds checking and creates a MMIO structure "]
+            #[doc = "based on a raw pointer which might lead to undefined behaviour on invalid offsets."]
+            #[doc = "Users MUST ensure that the offset is valid."]
+            #[inline]
+            pub fn #field_ident_shared_unchecked(&self, index: usize) -> derive_mmio::SharedInner<#inner_mmio_path<'_>> {
+                derive_mmio::SharedInner::__new_internal(
+                    unsafe {
+                        self.#private_steal_unchecked_func_name(index)
+                    }
+                )
+            }
+
+            #[doc = "Steal inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[inline]
+            pub unsafe fn #steal_func_name(&mut self, index: usize) -> Result<#inner_mmio_path<'static>, #error_type> {
+                if index >= self.#array_len_func() {
+                    return Err(#error_type(index));
+                }
+                Ok(unsafe { self.#steal_func_name_unchecked(index) })
+            }
+
+            #[doc = "Steal inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[doc = ""]
+            #[doc = "This function does not perform bounds checking and creates a MMIO structure "]
+            #[doc = "based on a raw pointer which might lead to undefined behaviour on invalid offsets."]
+            #[doc = "Users MUST ensure that the offset is valid."]
+            #[inline]
+            pub unsafe fn #steal_func_name_unchecked(&mut self, index: usize) -> #inner_mmio_path<'static> {
+                unsafe { self.#private_steal_unchecked_func_name(index) }
+            }
+
+            #[doc = "Steal a shared instance of the inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
+            #[doc = "but only requires a shared reference to the outer MMIO block."]
+            #[doc = ""]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[inline]
+            pub unsafe fn #steal_func_name_shared(&self, index: usize) -> Result<derive_mmio::SharedInner<#inner_mmio_path<'static>>, #error_type> {
+                if index >= self.#array_len_func() {
+                    return Err(#error_type(index));
+                }
+                Ok(unsafe { self.#steal_func_name_shared_unchecked(index) })
+            }
+
+            #[doc = "Steal a shared instance of the inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
+            #[doc = "but only requires a shared reference to the outer MMIO block."]
+            #[doc = ""]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[doc = ""]
+            #[doc = "This function does not perform bounds checking and creates a MMIO structure "]
+            #[doc = "based on a raw pointer which might lead to undefined behaviour on invalid offsets."]
+            #[doc = "Users MUST ensure that the offset is valid."]
+            #[inline]
+            pub unsafe fn #steal_func_name_shared_unchecked(&self, index: usize) -> derive_mmio::SharedInner<#inner_mmio_path<'static>> {
+                derive_mmio::SharedInner::__new_internal(
+                    unsafe {
+                        self.#private_steal_unchecked_func_name(index)
+                    }
+                )
+            }
+
+            #[doc = "Length of the inner MMIO array`"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[inline]
+            pub const fn #array_len_func(&self) -> usize {
+                #array_len
+            }
+
+            #[doc(hidden)]
+            unsafe fn #private_steal_unchecked_func_name(&self, index: usize) -> #inner_mmio_path<'static> {
+                let ptr = unsafe {(*self.ptr).#field_ident.as_mut_ptr().add(index) };
+                unsafe {
+                    #element_type::new_mmio(ptr)
+                }
+            }
+
+        }
+    }
+
+    pub fn generate_access_method_for_single_inner_mmio(
+        &mut self,
+        ident: &Ident,
+        field_ident: &Ident,
+        type_path: &TypePath,
+    ) -> TokenStream {
+        // Get the segments of the type path
+        let mut segments = type_path.path.segments.clone();
+
+        if let Some(last_segment) = segments.last_mut() {
+            // Prepend "Mmio" to the last segment's identifier
+            let new_ident =
+                syn::Ident::new(&format!("Mmio{}", last_segment.ident), last_segment.span());
+
+            // Modify the last segment to be "Mmio<LastSegment>"
+            last_segment.ident = new_ident;
+        }
+
+        // Create the new Path
+        let inner_mmio_path = Path {
+            segments,
+            leading_colon: type_path.path.leading_colon,
+        };
+        self.bound_checks.push(quote! {
+            derive_mmio::is_mmio::<#inner_mmio_path>();
+        });
+        let field_ident_shared = format_ident!("{}_shared", field_ident);
+        let steal_func_name = format_ident!("steal_{}", field_ident);
+        let steal_func_name_shared = format_ident!("steal_{}_shared", field_ident);
+        let steal_func_unchecked_name = format_ident!("__steal_{}_unchecked", field_ident);
+        quote! {
+            #[doc = "Obtain a reference to the inner MMIO field "]
+            #[doc = concat!("[", stringify!(#ident), "::", stringify!(#field_ident), "]")]
+            #[doc = ""]
+            #[doc = "# Lifetime"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is tied to the"]
+            #[doc = "lifetime of this structure"]
+            #[inline]
+            pub fn #field_ident(&mut self) -> #inner_mmio_path<'_> {
+                unsafe {
+                    self.#steal_func_name()
+                }
+            }
+
+            #[doc = "Obtain a shared instace of the inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
+            #[doc = "but only requires a shared reference to the outer MMIO block."]
+            #[doc = ""]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[inline]
+            pub fn #field_ident_shared(&self) -> derive_mmio::SharedInner<#inner_mmio_path<'_>> {
+                derive_mmio::SharedInner::__new_internal(
+                    unsafe {
+                        self.#steal_func_unchecked_name()
+                    }
+                )
+            }
+
+            #[doc = "Steal inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[inline]
+            pub unsafe fn #steal_func_name(&mut self) -> #inner_mmio_path<'static> {
+                unsafe { self.#steal_func_unchecked_name() }
+            }
+
+            #[doc = "Steal a shared instance of the inner MMIO field `"]
+            #[doc = stringify!(#field_ident)]
+            #[doc = "`."]
+            #[doc = "This variant only allow access to non-mutable methods of the MMIO block,"]
+            #[doc = "but only requires a shared reference to the outer MMIO block."]
+            #[doc = ""]
+            #[doc = "# Lifetime and Safety"]
+            #[doc = ""]
+            #[doc = "The lifetime of the returned inner MMIO block is static which"]
+            #[doc = "allows independent usage of the inner block and arbitrary"]
+            #[doc = "creation of of multiple inner blocks for the same peripheral."]
+            #[doc = "If you create multiple instances of this handle at the same time,"]
+            #[doc = "you are responsible for ensuring that there are no read-modify-write"]
+            #[doc = "races on any of the registers."]
+            #[inline]
+            pub unsafe fn #steal_func_name_shared(&self) -> derive_mmio::SharedInner<#inner_mmio_path<'static>> {
+                derive_mmio::SharedInner::__new_internal(
+                    unsafe {
+                        self.#steal_func_unchecked_name()
+                    }
+                )
+            }
+
+            #[doc(hidden)]
+            unsafe fn #steal_func_unchecked_name(&self) -> #inner_mmio_path<'static> {
+                let ptr = unsafe { core::ptr::addr_of_mut!((*self.ptr).#field_ident) };
+                unsafe {
+                    #type_path::new_mmio(ptr)
+                }
+            }
+        }
+    }
+
     fn generate_field_access_methods(
         &self,
         ident: &Ident,
