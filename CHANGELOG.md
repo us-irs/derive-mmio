@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `#[mmio(ConstPtr)]` and `#[mmio(ConstInner)]` outer attributes which add `const`ness to
+- `#[mmio(const_ptr)]` and `#[mmio(const_inner)]` outer attributes which add `const`ness to
   pointer getters and inner MMIO block getter functions respectively. Those require
   Rust version 1.83.0 or higher.
 
