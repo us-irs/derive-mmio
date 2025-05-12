@@ -25,16 +25,16 @@ pub fn derive_mmio(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                         omit_ctor = true;
                         return Ok(());
                     }
-                    if meta.path.is_ident("ConstPtr") {
+                    if meta.path.is_ident("const_ptr") {
                         const_ptr = true;
                         return Ok(());
                     }
-                    if meta.path.is_ident("ConstInner") {
+                    if meta.path.is_ident("const_inner") {
                         const_inner = true;
                         return Ok(());
                     }
                     Err(meta.error(
-                        "invalid content of mmio attribute, allowed values: `no_ctors`, `ConstPtr`, `ConstInner`"
+                        "invalid content of mmio attribute, allowed values: `no_ctors`, `const_ptr`, `const_inner`"
                     ))
                 }) {
                     abort!(e);

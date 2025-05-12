@@ -333,9 +333,9 @@ with `#[derive(Mmio)]`:
 - `#[mmio(no_ctors)]`: Omit the generation of constructor functions like
   `new_mmio_at` and `new_mmio`. This allows users to specify their own custom
   constructors, for example to constrain or check the allowed base addresses.
-- `#[mmio(ConstPtr)]`: Pointer getter methods for array field are `const` now.
+- `#[mmio(const_ptr)]`: Pointer getter methods for array field are `const` now.
   Requires Rust 1.83.0 or higher.
-- `#[mmio(ConstInner)]`: Const getter methods for inner MMIO blocks. Requires Rust 1.83.0 or
+- `#[mmio(const_inner)]`: Const getter methods for inner MMIO blocks. Requires Rust 1.83.0 or
   higher.
 
 ### Field attributes
