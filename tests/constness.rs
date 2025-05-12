@@ -7,7 +7,7 @@ struct UartBank {
 }
 
 #[derive(derive_mmio::Mmio)]
-#[mmio(const_ptr, const_inner)]
+#[mmio(no_ctors, const_ptr, const_inner)]
 #[repr(C)]
 struct Uart {
     // you can be explicit if you like
