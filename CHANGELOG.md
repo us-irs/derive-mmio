@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.0] - 2025-05-29
+
 ### Added
 
 - `#[mmio(const_ptr)]` and `#[mmio(const_inner)]` outer attributes which add `const`ness to
@@ -60,8 +62,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - First release
 - Provides `read_xxx`, `write_xxx` and `modify_xxx` methods
 
-[Unreleased]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.4.0...HEAD
-[v0.4.0]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.4.0...derive-mmio-v0.4.0
+[Unreleased]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.5.0...HEAD
+[v0.5.0]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.4.0...derive-mmio-v0.5.0
+[v0.4.0]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.3.0...derive-mmio-v0.4.0
 [v0.3.0]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.2.0...derive-mmio-v0.3.0
 [v0.2.0]: https://github.com/knurling-rs/derive-mmio/compare/derive-mmio-v0.1.0...derive-mmio-v0.2.0
 [v0.1.0]: https://github.com/knurling-rs/derive-mmio/releases/tag/derive-mmio-v0.1.0
