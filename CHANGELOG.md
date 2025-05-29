@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `#[mmio(const_ptr)]` and `#[mmio(const_inner)]` outer attributes which add `const`ness to
   pointer getters and inner MMIO block getter functions respectively. Those require
   Rust version 1.83.0 or higher.
+- Support for arrays of inner blocks.
+- Can access inner blocks through a shared reference.
 
 ### Changed
 
@@ -40,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The `fn new_mmio` and `fn new_mmio_at` functions are now cost
+- The `fn new_mmio` and `fn new_mmio_at` functions are now const
 - We no longer emit a different version of `fn new_mmio_at` using exposed
   provenance on Rust version 1.84 or higher - because that API is not (yet)
   const.
