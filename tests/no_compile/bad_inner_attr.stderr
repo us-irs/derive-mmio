@@ -1,4 +1,4 @@
-error: `#[mmio(...)]` only supports 'Read', 'ReadWrite', 'Write', 'Modify' and 'inner' options
+error: `#[mmio(...)]` only supports 'Inner', 'Read', 'PureRead', 'Write', and 'Modify' options
  --> tests/no_compile/bad_inner_attr.rs:4:5
   |
 4 |     #[mmio(RW)]

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `${field}_shared_unchecked` function to access inner arrays is now `unsafe`
+- Renamed `#[mmio(inner)]` to `#[mmio(Inner)]`
 
 ## [v0.5.0] - 2025-05-29
 

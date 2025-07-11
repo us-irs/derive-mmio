@@ -16,7 +16,7 @@ struct MmioUartBank<'a> {
 #[repr(C)]
 pub struct Uart {
     control: u32,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     banks: [UartBank; 2],
 }
 
