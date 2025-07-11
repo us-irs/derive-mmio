@@ -210,7 +210,7 @@ let p: *mut u32 = mmio_uart.pointer_to_data();
 
 ### Inner Fields
 
-If you have a field that is annotated with `#[mmio(inner)]`, the derive macro
+If you have a field that is annotated with `#[mmio(Inner)]`, the derive macro
 will generate getters for that field. Note that the type of such 'inner' fields
 must be annotated with `#[derive(Mmio)]`.
 
@@ -221,7 +221,7 @@ and will have a lifetime tied to the outer MMIO structure.
 // Given
 #[derive(Mmio)]
 struct Peripheral {
-    #[mmio(inner)]
+    #[mmio(Inner)]
     some_inner: InnerType
 }
 
@@ -241,7 +241,7 @@ number of owned inner MMIO objects:
 // Given
 #[derive(Mmio)]
 struct Peripheral {
-    #[mmio(inner)]
+    #[mmio(Inner)]
     some_inner: InnerType
 }
 
@@ -261,7 +261,7 @@ access to non-mutable methods on the inner field.
 // Given
 #[derive(Mmio)]
 struct Peripheral {
-    #[mmio(inner)]
+    #[mmio(Inner)]
     some_inner: InnerType
 }
 
@@ -351,7 +351,7 @@ The access permission attributes work for array fields as well.
   function for the field.
 - `#[mmio(Modify)]`: The field can be modified. This will generate a modify
   function for the field which performs a Read-Modify-Write operation.
-- `#[mmio(inner)]`: The field is a register block. It must be a type which is
+- `#[mmio(Inner)]`: The field is a register block. It must be a type which is
   `#[derive(Mmio)]`, which will be verified using trait bounds. The derive macro
   will generate getter functions to retrieve a handle for the inner block, with
   the lifetime of the inner handle tied to the outer handle.
@@ -368,7 +368,7 @@ The following field types are supported and tested:
 - Arrays of [`u32`]
 - Bitfields implemented with [`bitbybit::bitfield`]
 - Other `#[derive(Mmio)]` types, if the field is annotated with the
-  `#[mmio(inner)]` attribute. Arrays of inner MMIO types are also allowed.
+  `#[mmio(Inner)]` attribute. Arrays of inner MMIO types are also allowed.
 
 [`bitbybit::bitfield`]: https://crates.io/crates/bitbybit
 

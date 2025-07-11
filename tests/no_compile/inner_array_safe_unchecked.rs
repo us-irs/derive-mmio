@@ -17,7 +17,7 @@ mod inner {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 struct Uart {
-    #[mmio(inner)]
+    #[mmio(Inner)]
     array: [inner::UartBank; 2],
 }
 

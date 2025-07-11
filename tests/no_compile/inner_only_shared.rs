@@ -8,7 +8,7 @@ struct UartBank {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 struct Uart {
-    #[mmio(inner)]
+    #[mmio(Inner)]
     bank_0: UartBank,
 }
 

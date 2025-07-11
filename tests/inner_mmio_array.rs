@@ -28,7 +28,7 @@ mod inner {
 #[repr(C)]
 pub struct Uart {
     control: u32,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     banks: [inner::UartBank; 2],
 }
 

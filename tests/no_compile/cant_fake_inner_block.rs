@@ -16,9 +16,9 @@ struct MmioUartBank<'a> {
 struct Uart {
     // you can be explicit if you like
     control: u32,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     bank_0: UartBank,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     bank_1: UartBank,
 }
 

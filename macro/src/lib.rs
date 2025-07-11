@@ -270,10 +270,10 @@ impl FieldParser {
                     abort!(attr.span(), "`Failed to parse #[mmio(...)]`");
                 };
                 let unexpected_meta_printout =
-                    "`#[mmio(...)]` only supports 'Read', 'ReadWrite', 'Write', 'Modify' and 'inner' options";
+                    "`#[mmio(...)]` only supports 'Inner', 'Read', 'PureRead', 'Write', and 'Modify' options";
                 for meta in nested {
                     if let Meta::Path(path) = meta {
-                        if path.is_ident("inner") {
+                        if path.is_ident("Inner") {
                             return self.generate_access_method_for_inner_mmio_field(
                                 ident,
                                 field,

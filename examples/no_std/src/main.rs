@@ -19,7 +19,7 @@ struct Uart {
     // This is explicitly read-write
     #[mmio(Read, Write)]
     control: u32,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     bank_0: inner::UartBank,
     // Array of registers
     array: [u32; 4],
