@@ -18,12 +18,14 @@ fn all_tests() {
 
     // tests that fail
 
+    t.compile_fail("tests/no_compile/array_safe_unchecked.rs");
     t.compile_fail("tests/no_compile/bad_inner_attr.rs");
     t.compile_fail("tests/no_compile/bad_outer_attr.rs");
     t.compile_fail("tests/no_compile/cant_fake_inner_block.rs");
     t.compile_fail("tests/no_compile/double_read.rs");
     t.compile_fail("tests/no_compile/duplicate_field_attr.rs");
     t.compile_fail("tests/no_compile/inner_array_invalid_type.rs");
+    t.compile_fail("tests/no_compile/inner_array_safe_unchecked.rs");
     t.compile_fail("tests/no_compile/inner_mmio_double_borrow.rs");
     t.compile_fail("tests/no_compile/inner_only_shared.rs");
     t.compile_fail("tests/no_compile/modify_standalone.rs");
