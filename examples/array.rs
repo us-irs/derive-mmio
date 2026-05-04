@@ -51,3 +51,8 @@ fn main() {
     assert_eq!(mmio_uart.len_array_read_only(), 4);
     assert_eq!(mmio_uart.len_array_write_only(), 2);
 }
+
+#[test]
+fn test_main() {
+    main()
+}
