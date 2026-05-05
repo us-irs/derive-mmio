@@ -84,3 +84,8 @@ fn main() {
     assert_eq!(bank_array_1.read_data(), 0x2);
     assert_eq!(bank_array_1.read_status(), 0x3);
 }
+
+#[test]
+fn test_main() {
+    main()
+}

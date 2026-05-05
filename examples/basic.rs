@@ -61,3 +61,8 @@ fn main() {
     let mmio_uart = unsafe { Uart::new_mmio(core::ptr::addr_of_mut!(uart)) };
     println!("status = {}", mmio_uart.read_status());
 }
+
+#[test]
+fn test_main() {
+    main()
+}
