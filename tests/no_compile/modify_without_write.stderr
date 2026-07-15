@@ -4,11 +4,11 @@ error: Detected Modify field attribute without read and/or write access specifie
 6 |     #[mmio(Modify, PureRead)]
   |     ^
 
-error[E0599]: no function or associated item named `new_mmio` found for struct `Uart` in the current scope
+error[E0599]: no associated function or constant named `new_mmio` found for struct `Uart` in the current scope
   --> tests/no_compile/modify_without_write.rs:14:40
    |
-4  | struct Uart {
-   | ----------- function or associated item `new_mmio` not found for this struct
+ 4 | struct Uart {
+   | ----------- associated function or constant `new_mmio` not found for this struct
 ...
 14 |     let mut mmio_uart = unsafe { Uart::new_mmio(core::ptr::addr_of_mut!(uart)) };
-   |                                        ^^^^^^^^ function or associated item not found in `Uart`
+   |                                        ^^^^^^^^ associated function or constant not found in `Uart`

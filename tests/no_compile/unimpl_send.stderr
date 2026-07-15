@@ -12,7 +12,6 @@ note: required for `__Wrapper<'_, *const ()>` to implement `Send`
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   = note: 1 redundant requirement hidden
   = note: required for `CpuPrivateRegBlock` to implement `Send`
-  = help: see issue #48214
   = note: this error originates in the derive macro `derive_mmio::Mmio` which comes from the expansion of the attribute macro `negative_impl::negative_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0277]: `*const ()` cannot be sent between threads safely
@@ -27,7 +26,7 @@ error[E0277]: `*const ()` cannot be sent between threads safely
 note: required for `__Wrapper<'_, *const ()>` to implement `Send`
   --> tests/no_compile/unimpl_send.rs:8:1
    |
-8  | #[negative_impl::negative_impl]
+ 8 | #[negative_impl::negative_impl]
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    = note: 2 redundant requirements hidden
    = note: required for `MmioCpuPrivateRegBlock<'_>` to implement `Send`
