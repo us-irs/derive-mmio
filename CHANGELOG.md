@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- MMIO wrapper structures now implement `core::fmt::Debug`. The implementation simply shows
+  the base address.
+
 ## [v0.7.0] - 2026-06-29
 
 ### Added

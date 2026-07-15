@@ -164,6 +164,14 @@ fn try_derive_mmio(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> 
             phantom: core::marker::PhantomData<&'a ()>,
         }
 
+        impl core::fmt::Debug for #wrapper_ident<'_> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct(stringify!(#wrapper_ident))
+                    .field("ptr", &self.ptr)
+                    .finish()
+            }
+        }
+
         impl #wrapper_ident<'_> {
             const _FIELD_SIZE: usize = {
                 0 #( + #field_sizes )*
