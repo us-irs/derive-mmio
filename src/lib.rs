@@ -383,6 +383,10 @@ appropriate size for your CPU architecture.
 If you accidentally introduce padding (or, if the sum of the size of the
 individual fields isn't the same as the size of the overall `struct`), you will
 get a compile error.
+
+## Additional notes on generated MMIO wrapper
+
+The generated MMIO wrapper type implements the `core::fmt::Debug` trait.
 */
 
 #![no_std]

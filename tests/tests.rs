@@ -9,6 +9,7 @@ fn all_tests() {
     t.pass("tests/inner_mmio.rs");
     t.pass("tests/inner_mmio_array.rs");
     t.pass("tests/no_ctors.rs");
+    t.pass("tests/derives_debug.rs");
 
     // tests that pass but need an specific rustc version
 
