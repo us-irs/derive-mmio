@@ -12,8 +12,5 @@ pub fn main() {
     let mmio_uart = unsafe { Uart::new_mmio(core::ptr::addr_of_mut!(uart)) };
     let addr = core::ptr::addr_of!(uart);
     // Verify that the debug implementation simply shows the base address.
-    assert_eq!(
-        format!("{:?}", mmio_uart),
-        format!("MmioUart {{ ptr: {:?} }}", addr)
-    );
+    assert_eq!(format!("{:?}", mmio_uart), format!("MmioUart({:?})", addr));
 }

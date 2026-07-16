@@ -166,8 +166,8 @@ fn try_derive_mmio(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> 
 
         impl core::fmt::Debug for #wrapper_ident<'_> {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                f.debug_struct(stringify!(#wrapper_ident))
-                    .field("ptr", &self.ptr)
+                f.debug_tuple(stringify!(#wrapper_ident))
+                    .field(&self.ptr)
                     .finish()
             }
         }
