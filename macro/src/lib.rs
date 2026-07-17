@@ -3,8 +3,8 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{
-    parse_macro_input, punctuated::Punctuated, spanned::Spanned, Data, DeriveInput, Field, Fields,
-    Ident, Meta, Path, Token, TypeArray, TypePath,
+    parse_macro_input, punctuated::Punctuated, spanned::Spanned, Data, DeriveInput, Expr, Field,
+    Fields, Ident, Lit, Meta, Path, Token, TypeArray, TypePath,
 };
 
 #[proc_macro_derive(Mmio, attributes(mmio))]
@@ -233,6 +233,36 @@ fn field_size(field: &Field) -> TokenStream {
     }
 }
 
+fn parse_offset_literal(expr: Expr) -> syn::Result<usize> {
+    let Expr::Lit(expr_lit) = expr else {
+        return Err(syn::Error::new(
+            expr.span(),
+            "offset must be an integer literal",
+        ));
+    };
+    let Lit::Int(lit) = expr_lit.lit else {
+        return Err(syn::Error::new(
+            expr_lit.lit.span(),
+            "offset must be an integer literal",
+        ));
+    };
+
+    let mut s = lit.to_string();
+    let suffix = lit.suffix();
+    if !suffix.is_empty() {
+        s.truncate(s.len() - suffix.len());
+    }
+    let s = s.replace('_', "");
+
+    let value = if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+        usize::from_str_radix(hex, 16)
+    } else {
+        s.parse::<usize>()
+    };
+
+    value.map_err(|_| syn::Error::new(lit.span(), "invalid integer for `offset`"))
+}
+
 #[derive(Debug, Default, PartialEq, Eq)]
 enum ReadAccess {
     // Pure reads, no side effects.
@@ -244,6 +274,7 @@ enum ReadAccess {
 
 #[derive(Debug, Default)]
 struct AccessModifiers {
+    offset: Option<u64>,
     read: Option<ReadAccess>,
     write: bool,
     modify: bool,
@@ -338,8 +369,13 @@ impl FieldParser {
                                 ));
                             }
                             access.modify = true;
+                        } else if path.is_ident("Offset") {
                         } else {
                             return Err(syn::Error::new(attr.span(), unexpected_meta_printout));
+                        }
+                    } else if let Meta::NameValue(name_value) = meta {
+                        if name_value.path.is_ident("offset") {
+                            access.offset = Some(parse_offset_literal(name_value.value)? as u64);
                         }
                     } else {
                         return Err(syn::Error::new(attr.span(), unexpected_meta_printout));
